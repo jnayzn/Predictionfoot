@@ -19,6 +19,41 @@ Tous les modèles partagent l'interface `OutcomeModel` (`fit(train)`, `predict_p
 1N2, double chance, buts attendus, Over/Under 1.5/2.5/3.5, BTTS, probabilités qu'une équipe
 marque ≥ 1/2/3 buts, top 5 des scores exacts, score le plus probable.
 
+## Phase 6 — modèles tabulaires (gradient boosting)
+
+| Modèle | Sortie | Principe |
+|---|---|---|
+| `xgboost` | 1N2 | `XGBClassifier` multi:softprob sur les ~170 variables (NaN gérés nativement) |
+| `lightgbm` | 1N2 | `LGBMClassifier` multiclass |
+| `lightgbm_goals` | matrice de scores | deux régressions LightGBM à objectif Poisson (buts domicile / extérieur) → matrice de Poisson → tous les marchés |
+| `xgboost_market`, `lightgbm_market` | 1N2 | variantes **avec** les variables de marché (cotes avant-match) |
+
+Choix méthodologiques :
+
+- **Variables de marché exclues par défaut** : un modèle entraîné sur les cotes reproduit le
+  marché et ne peut plus servir à détecter un écart avec lui (phase 10). Les variantes
+  `*_market` mesurent l'apport des cotes.
+- **Early stopping sur une réserve chronologique interne** (les 15 % les plus récents de
+  l'entraînement), jamais sur la validation ni sur le test.
+- **Optimisation d'hyperparamètres** (`--tune N`) : recherche aléatoire, chaque essai entraîné
+  sur le train et noté par la log loss de **validation** ; le test n'est jamais lu (vérifié par test).
+- **Importance des variables** (gain) exportée avec chaque modèle enregistré
+  (`feature_importance.csv`).
+- Hypothèse à vérifier sur données réelles : les modèles de boosting ne sont pas supposés
+  meilleurs que Dixon-Coles. Sur des données synthétiques générées par un processus de Poisson,
+  Dixon-Coles (correctement spécifié) reste meilleur ; seule la validation sur données réelles
+  tranchera.
+
+### Suivi des expériences (MLflow)
+
+Chaque évaluation et chaque optimisation est enregistrée dans MLflow (base SQLite locale
+`var/experiments/mlflow.db` par défaut) et en JSON (`var/experiments/runs/`). Si MLflow
+n'est pas disponible, le suivi bascule automatiquement en JSON seul.
+
+```bash
+mlflow ui --backend-store-uri sqlite:///var/experiments/mlflow.db   # nécessite le paquet mlflow complet
+```
+
 ## Protocole d'évaluation
 
 - **Découpage strictement chronologique** (`training/datasets.py`) : entraînement = saisons
@@ -49,6 +84,8 @@ football-ai build-features
 football-ai train-baselines --validation-seasons 2023 --test-seasons 2024
 football-ai train-baselines --validation-seasons 2023 --test-seasons 2024 --evaluate-test   # rapport final
 football-ai train-baselines --validation-seasons 2023 --register   # ré-entraîne sur train+validation et enregistre
+football-ai train-models --models frequency,elo,dixon_coles,xgboost,lightgbm,lightgbm_goals \
+    --validation-seasons 2023 --test-seasons 2024 --tune 20 --register
 ```
 
 Rapports : `var/reports/baselines_*.json`. Modèles : `var/models/<nom>/<version>/` (`model.joblib`,

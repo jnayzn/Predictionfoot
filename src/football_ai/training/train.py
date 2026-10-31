@@ -13,7 +13,9 @@ import pandas as pd
 from football_ai.models.base import OutcomeModel
 from football_ai.models.baselines import EloModel, FrequencyModel
 from football_ai.models.dixon_coles import DixonColesModel
+from football_ai.models.lightgbm import LightGBMGoalsModel, LightGBMModel
 from football_ai.models.poisson import PoissonModel
+from football_ai.models.xgboost import XGBoostModel
 from football_ai.training.backtesting import walk_forward
 from football_ai.training.datasets import TemporalSplit
 from football_ai.training.evaluate import evaluate_goals, evaluate_probabilities
@@ -27,6 +29,24 @@ BASELINE_FACTORIES: dict[str, ModelFactory] = {
     "elo": EloModel,
     "poisson": PoissonModel,
     "dixon_coles": DixonColesModel,
+}
+
+TABULAR_FACTORIES: dict[str, ModelFactory] = {
+    "xgboost": XGBoostModel,
+    "lightgbm": LightGBMModel,
+    "lightgbm_goals": LightGBMGoalsModel,
+    "xgboost_market": lambda: XGBoostModel(use_market=True),
+    "lightgbm_market": lambda: LightGBMModel(use_market=True),
+}
+
+ALL_FACTORIES: dict[str, ModelFactory] = {**BASELINE_FACTORIES, **TABULAR_FACTORIES}
+# classes accepting hyperparameters (used by tuning / final fits)
+MODEL_CLASSES: dict[str, Callable[..., OutcomeModel]] = {
+    "xgboost": XGBoostModel,
+    "lightgbm": LightGBMModel,
+    "lightgbm_goals": LightGBMGoalsModel,
+    "dixon_coles": DixonColesModel,
+    "poisson": PoissonModel,
 }
 
 

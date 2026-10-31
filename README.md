@@ -4,9 +4,10 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 5 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 6 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
-> fuite, modèles de référence (fréquences, Elo) et modèles de buts (Poisson, Dixon-Coles). Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles) et
+> gradient boosting (XGBoost, LightGBM) avec suivi MLflow. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -88,6 +89,15 @@ Détails : [docs/features.md](docs/features.md).
 | Évaluation | log loss, Brier, RPS, accuracy/précision/rappel/F1, calibration, MAE des buts ; walk-forward ; test verrouillé |
 | Registre | artefacts versionnés + table `model_versions` |
 
+## Fonctionnalités de la phase 6
+
+| Fonction | Détail |
+|---|---|
+| XGBoost, LightGBM | classifieurs 1N2 ; variantes avec/sans variables de marché |
+| LightGBM buts | régressions de Poisson → matrice de scores → tous les marchés |
+| Optimisation | recherche aléatoire sur la validation, early stopping sur réserve chronologique interne |
+| Suivi | MLflow (SQLite local) + JSON ; importance des variables exportée |
+
 Détails : [docs/models.md](docs/models.md).
 
 ## Installation
@@ -157,6 +167,7 @@ football-ai build-matches                                 # couche canonique mul
 football-ai quality-report [--competition ligue_1] [--json] [--fail-on-error]
 football-ai build-features --check-leakage 50             # jeu de variables versionné
 football-ai train-baselines --validation-seasons 2023 --test-seasons 2024 [--register]
+football-ai train-models --validation-seasons 2023 --test-seasons 2024 --tune 20 --register
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -206,9 +217,10 @@ src/football_ai/
   data/quality/                    contrôles qualité du jeu de données, rapports
   features/                        variables (forme, attaque, défense, Elo, contexte, h2h,
                                    marché, joueurs), contrôle anti-fuite, stockage versionné
-  models/                          baselines, poisson, dixon_coles (+ phases suivantes)
+  models/                          baselines, poisson, dixon_coles, xgboost, lightgbm (+ suivantes)
   prediction/                      matrices de scores et marchés
-  training/                        découpages temporels, métriques, walk-forward, registre
+  training/                        découpages temporels, métriques, walk-forward, registre,
+                                   optimisation, suivi d'expériences (MLflow)
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -239,7 +251,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 3 | Nettoyage et validation | ✅ terminé |
 | 4 | Feature engineering | ✅ terminé |
 | 5 | Poisson / modèle de référence | ✅ terminé |
-| 6 | XGBoost / LightGBM | à venir |
+| 6 | XGBoost / LightGBM | ✅ terminé |
 | 7 | Deep learning (PyTorch) | à venir |
 | 8 | Ensemble + calibration | à venir |
 | 9 | Backtesting et évaluation | à venir |
