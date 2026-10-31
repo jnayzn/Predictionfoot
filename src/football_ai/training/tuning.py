@@ -37,6 +37,14 @@ SEARCH_SPACES: dict[str, ParamSampler] = {
         "colsample_bytree": float(r.uniform(0.4, 1.0)),
         "reg_lambda": float(10 ** r.uniform(-1, 1.5)),
     },
+    "neural": lambda r: {
+        "hidden": int(r.choice([32, 64, 128])),
+        "embedding_dim": int(r.choice([0, 4, 8, 16])),
+        "dropout": float(r.uniform(0.0, 0.4)),
+        "learning_rate": float(10 ** r.uniform(-3.5, -2.3)),
+        "weight_decay": float(10 ** r.uniform(-4, -1.5)),
+        "goal_loss_weight": float(r.choice([0.0, 0.25, 0.5, 1.0])),
+    },
     "dixon_coles": lambda r: {
         "time_decay": float(r.choice([0.0005, 0.001, 0.0019, 0.003, 0.005])),
         "l2": float(r.choice([0.1, 0.5, 1.0, 3.0, 10.0])),

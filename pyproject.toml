@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "football-ai-predictor"
-version = "0.6.0"
+version = "0.8.0"
 description = "Football AI Predictor - probabilistic football match analysis "
 readme = "README.md"
 requires-python = ">=3.12"
@@ -36,6 +36,8 @@ dev = [
     "mypy>=1.10",
     "pandas-stubs",
 ]
+# PyTorch is optional (heavy): pip install -e ".[deep]"
+deep = ["torch>=2.2"]
 
 [project.scripts]
 football-ai = "football_ai.cli:main"
@@ -71,3 +73,10 @@ packages = ["football_ai"]
 [[tool.mypy.overrides]]
 module = ["sklearn.*", "scipy.*", "joblib.*", "xgboost.*", "lightgbm.*", "torch.*", "mlflow.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# PyTorch exposes some untyped callables (from_numpy, backward) and nn.Module is
+# Any when torch is not installed (optional dependency).
+module = ["football_ai.models.deep_learning.*"]
+disallow_untyped_calls = false
+disallow_subclassing_any = false

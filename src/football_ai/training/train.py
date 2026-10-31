@@ -12,6 +12,7 @@ import pandas as pd
 
 from football_ai.models.base import OutcomeModel
 from football_ai.models.baselines import EloModel, FrequencyModel
+from football_ai.models.deep_learning import TORCH_AVAILABLE
 from football_ai.models.dixon_coles import DixonColesModel
 from football_ai.models.lightgbm import LightGBMGoalsModel, LightGBMModel
 from football_ai.models.poisson import PoissonModel
@@ -40,6 +41,12 @@ TABULAR_FACTORIES: dict[str, ModelFactory] = {
 }
 
 ALL_FACTORIES: dict[str, ModelFactory] = {**BASELINE_FACTORIES, **TABULAR_FACTORIES}
+
+if TORCH_AVAILABLE:  # deep learning is optional (heavy dependency)
+    from football_ai.models.deep_learning.model import NeuralModel
+
+    ALL_FACTORIES["neural"] = NeuralModel
+    ALL_FACTORIES["neural_market"] = lambda: NeuralModel(use_market=True)
 # classes accepting hyperparameters (used by tuning / final fits)
 MODEL_CLASSES: dict[str, Callable[..., OutcomeModel]] = {
     "xgboost": XGBoostModel,
@@ -48,6 +55,8 @@ MODEL_CLASSES: dict[str, Callable[..., OutcomeModel]] = {
     "dixon_coles": DixonColesModel,
     "poisson": PoissonModel,
 }
+if TORCH_AVAILABLE:
+    MODEL_CLASSES["neural"] = NeuralModel
 
 
 @dataclass(slots=True)
@@ -56,6 +65,7 @@ class ModelEvaluation:
     metrics: dict[str, Any]
     proba: np.ndarray
     rows: pd.DataFrame = field(repr=False)
+    score_matrices: np.ndarray | None = field(default=None, repr=False)
 
 
 def evaluate_models(
@@ -82,7 +92,7 @@ def evaluate_models(
             actual = wf.rows[["home_goals", "away_goals"]].to_numpy(dtype=float)
             metrics.update(evaluate_goals(actual, wf.expected_goals))
         logger.info("model_evaluated", extra={"model": name, "log_loss": metrics["log_loss"]})
-        results.append(ModelEvaluation(name, metrics, wf.proba, wf.rows))
+        results.append(ModelEvaluation(name, metrics, wf.proba, wf.rows, wf.score_matrices))
     return results
 
 

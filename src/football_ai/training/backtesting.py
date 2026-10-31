@@ -23,6 +23,7 @@ class WalkForwardResult:
     proba: np.ndarray  # (n, 3)
     expected_goals: np.ndarray | None  # (n, 2) for goal models
     refits: int
+    score_matrices: np.ndarray | None = None  # (n, G, G) for goal models
 
 
 def walk_forward(
@@ -39,7 +40,7 @@ def walk_forward(
     played = played_rows(history)
     start, end = targets["kickoff_utc"].min(), targets["kickoff_utc"].max()
     step = pd.Timedelta(days=refit_every_days)
-    probas, goals, parts = [], [], []
+    probas, goals, matrices, parts = [], [], [], []
     refits = 0
     window_start = start
     while window_start <= end:
@@ -54,6 +55,8 @@ def walk_forward(
             probas.append(model.predict_proba(window))
             if hasattr(model, "expected_goals"):
                 goals.append(model.expected_goals(window))
+            if hasattr(model, "score_matrix"):
+                matrices.append(model.score_matrix(window))
             parts.append(window)
         window_start = window_end
     return WalkForwardResult(
@@ -61,4 +64,5 @@ def walk_forward(
         proba=np.vstack(probas),
         expected_goals=np.vstack(goals) if len(goals) == len(parts) else None,
         refits=refits,
+        score_matrices=np.concatenate(matrices) if len(matrices) == len(parts) else None,
     )
