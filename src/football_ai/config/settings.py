@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("var")
     competitions_file: Path = Path("configs/competitions.toml")
     team_aliases_file: Path = Path("configs/team_aliases.toml")
+    schedule_file: Path = Path("configs/schedule.toml")
     database_url: str = "postgresql+psycopg://football:football@localhost:5432/football_ai"
     database_echo: bool = False
 
@@ -85,6 +86,7 @@ class Settings(BaseSettings):
     bot_backend: Literal["service", "http"] = "service"
     bot_api_url: str = "http://localhost:8000"
     bot_api_key: SecretStr | None = None
+    telegram_admin_chat_id: int | None = None  # alerts destination (optional)
 
     @property
     def allowed_telegram_users(self) -> set[int]:

@@ -1,0 +1,49 @@
+# Scheduled jobs (football-ai scheduler). Cron syntax: minute hour day month weekday.
+# Times are interpreted in `timezone`. Disable a job with enabled = false.
+# API-consuming jobs never exceed their `max_requests` nor the daily quota
+# (API_FOOTBALL_DAILY_LIMIT minus API_FOOTBALL_QUOTA_RESERVE).
+
+timezone = "Europe/Paris"
+
+[jobs.sync_fixtures]          # fixtures + results of yesterday..today+days_ahead (1 request/day)
+cron = "0 7,13,19 * * *"
+days_ahead = 3
+
+[jobs.refresh_results]        # late results / corrections of the last days
+cron = "45 23 * * *"
+days_back = 2
+
+[jobs.match_details]          # statistics, lineups, player stats of finished matches (20/request)
+cron = "15 2 * * *"
+days_back = 7
+max_requests = 10
+
+[jobs.injuries]               # injuries/suspensions, current season (1 request/competition)
+cron = "0 8 * * *"
+
+[jobs.odds]                   # pre-match odds of matches starting soon (>= 1 request/match)
+cron = "30 9,16 * * *"
+hours_ahead = 30
+max_requests = 15
+
+[jobs.build_matches]          # canonical layer (no API)
+cron = "50 7,13,19,23 * * *"
+
+[jobs.predictions]            # predict & store matches starting within hours_ahead (no API)
+cron = "0 8,14,20 * * *"
+hours_ahead = 72
+
+[jobs.daily_report]           # Telegram report to subscribers
+cron = "30 10 * * *"
+enabled = true
+
+[jobs.evaluate_predictions]   # score stored predictions of finished matches
+cron = "0 3 * * *"
+
+[jobs.quality_check]          # data-quality report + alerts
+cron = "30 3 * * *"
+
+[jobs.historical_import]      # spend the remaining quota on history (resumable)
+cron = "0 4 * * *"
+seasons = "2018-2025"
+max_requests = 40

@@ -18,3 +18,4 @@ mlflow-skinny>=2.12
 fastapi>=0.110
 uvicorn[standard]>=0.29
 aiogram>=3.4,<4
+apscheduler>=3.10,<4

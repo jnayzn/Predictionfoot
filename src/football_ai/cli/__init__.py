@@ -11,6 +11,7 @@ from typing import Any
 
 from football_ai.cli import (
     api_commands,
+    automation_commands,
     bot_commands,
     data_commands,
     evaluation_commands,
@@ -59,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluation_commands.register(sub)
     server_commands.register(sub)
     bot_commands.register(sub)
+    automation_commands.register(sub)
     return parser
 
 

@@ -25,7 +25,7 @@ from football_ai.database import models as db
 from football_ai.database.connection import session_scope
 from football_ai.database.models import Base
 from tests.conftest import BASE_URL, all_leagues_payload, envelope, fixture_item
-from tests.payloads import add_details, injury_item, standings_item, team_item
+from tests.payloads import add_details, injury_item, odds_item, standings_item, team_item
 from tests.unit.test_football_data_uk import CSV_WITH_TIME
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
@@ -92,6 +92,13 @@ class FakeApi:
                     )
                 )
             return httpx.Response(200, json=envelope(endpoint, items))
+        if endpoint == "fixtures" and "date" in params:
+            items = [
+                f for f in self.fixtures.values() if f["fixture"]["date"][:10] == params["date"]
+            ]
+            return httpx.Response(200, json=envelope(endpoint, items))
+        if endpoint == "odds":
+            return httpx.Response(200, json=envelope(endpoint, [odds_item(int(params["fixture"]))]))
         if endpoint == "fixtures":
             items = [
                 f

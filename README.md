@@ -4,12 +4,12 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 11 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 12 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
 > fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
 > gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble, calibration,
 > backtesting scientifique, suivi des prédictions réelles, moteur d'analyse et de
-> recommandation, API FastAPI sécurisée, bot Telegram. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> recommandation, API FastAPI sécurisée, bot Telegram, automatisation planifiée. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -148,6 +148,18 @@ Détails : [docs/api.md](docs/api.md).
 
 Détails : [docs/bot.md](docs/bot.md).
 
+## Fonctionnalités de la phase 12
+
+| Fonction | Détail |
+|---|---|
+| Planificateur | APScheduler, horaires cron configurables (`configs/schedule.toml`) |
+| Tâches | programmes, résultats et corrections, détails, blessures, cotes, couche canonique, prédictions, rapport Telegram, évaluation, contrôle qualité, import historique |
+| Quotas | budget vérifié avant chaque appel, arrêt propre et reprise |
+| Recalcul | nouvelle version de prédiction seulement si l'information ou le modèle change |
+| Supervision | historique `scheduled_job_runs`, alertes logs + Telegram administrateur |
+
+Détails : [docs/automation.md](docs/automation.md).
+
 ## Installation
 
 Prérequis : Python **3.12+**.
@@ -221,6 +233,8 @@ football-ai backtest --validation-seasons 2021,2022 --test-seasons 2023,2024
 football-ai evaluate-predictions                          # track record des prédictions publiées
 football-ai serve --host 0.0.0.0 --port 8000              # API (docs : /docs)
 football-ai bot                                           # bot Telegram (TELEGRAM_BOT_TOKEN)
+football-ai scheduler                                     # tâches planifiées
+football-ai run-job sync_fixtures                         # une tâche immédiatement
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -256,6 +270,7 @@ structure documentée de l'API mais leurs valeurs sont inventées (voir `tests/c
 ```
 configs/competitions.toml          catalogue des compétitions (clé interne -> id par fournisseur)
 configs/team_aliases.toml          overrides manuels du rapprochement d'équipes
+configs/schedule.toml              horaires des tâches planifiées
 migrations/                        migrations Alembic
 scripts/                           scripts d'exploitation (import historique quotidien)
 src/football_ai/
@@ -278,6 +293,7 @@ src/football_ai/
   analysis/                        analyse de match/équipe, moteur de recommandation
   backend/                         API FastAPI (routes, schémas, services, sécurité)
   bot/                             bot Telegram (handlers, keyboards, middlewares, notifications)
+  automation/                      tâches planifiées, planificateur, alertes
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -300,6 +316,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/evaluation.md](docs/evaluation.md) — backtesting, significativité, track record
 - [docs/api.md](docs/api.md) — API, sécurité, moteur d'analyse et de recommandation
 - [docs/bot.md](docs/bot.md) — bot Telegram
+- [docs/automation.md](docs/automation.md) — tâches planifiées, quotas, alertes
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -317,7 +334,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 9 | Backtesting et évaluation | ✅ terminé |
 | 10 | API FastAPI | ✅ terminé |
 | 11 | Bot Telegram | ✅ terminé |
-| 12 | Automatisation | à venir |
+| 12 | Automatisation | ✅ terminé |
 | 13 | Docker, déploiement, monitoring | à venir |
 | 14 | Optimisation, commercialisation | à venir |
 

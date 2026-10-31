@@ -7,7 +7,10 @@ production model (default priority: ensemble > dixon_coles > elo).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -94,6 +97,24 @@ def load_production_model(
     raise NoProductionModelError(
         f"no registered model among {list(priority)} - run `football-ai train-ensemble --register`"
     )
+
+
+def feature_hash(features: dict[str, Any]) -> str:
+    """Fingerprint of the information used for a prediction (rounded feature values).
+
+    A new prediction version is stored only when this changes (new result,
+    odds, injuries...) or when the model changes.
+    """
+    from football_ai.features.builder import feature_columns
+
+    cols = sorted(c for c in feature_columns(pd.DataFrame([features])) if c in features)
+    payload = {}
+    for c in cols:
+        v = features[c]
+        payload[c] = (
+            None if v is None or (isinstance(v, float) and math.isnan(v)) else round(float(v), 4)
+        )
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:32]
 
 
 def _to_dict(p: np.ndarray) -> dict[str, float]:
@@ -269,7 +290,11 @@ class PredictionEngine:
         return self.predict([virtual_id], frames=extended)[0]
 
     def predict_and_store(self, match_ids: Sequence[int]) -> tuple[list[MatchPrediction], int]:
-        """Predict and persist (immutable) predictions of matches not started yet."""
+        """Predict and persist (immutable) predictions of matches not started yet.
+
+        A new version is stored only when the information (feature hash) or the
+        model version changed since the latest stored prediction of the match.
+        """
         predictions = self.predict(match_ids)
         production = self.production
         if production.model_version_id is None:
@@ -284,6 +309,12 @@ class PredictionEngine:
                 match = session.get(db.Match, p.match_id)
                 if match is None:
                     continue
+                fingerprint = feature_hash(p.features)
+                latest = repo.latest_for_fixture(
+                    match.primary_fixture_id, production.model_version_id
+                )
+                if latest is not None and latest.feature_hash == fingerprint:
+                    continue  # nothing new since the last published prediction
                 repo.record(
                     fixture_id=match.primary_fixture_id,
                     model_version_id=production.model_version_id,
@@ -302,6 +333,7 @@ class PredictionEngine:
                         "uncertainties": p.confidence.uncertainties,
                         **p.confidence.components,
                     },
+                    feature_hash=fingerprint,
                     created_at=now,
                 )
                 stored += 1
