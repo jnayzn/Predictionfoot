@@ -1,0 +1,64 @@
+# Competitions covered by Football AI Predictor.
+#
+# `key` is the provider-independent identifier used everywhere in the system.
+# `provider_ids` maps each data provider to its own identifier, so a new
+# provider can be added without touching the prediction engine.
+# `name` / `country` are used to VERIFY the provider mapping during discovery
+# (a mismatch is reported as a data-quality issue, never silently accepted).
+#
+# To add a competition: append a new [[competitions]] block, then run
+# `football-ai discover` to verify the mapping against the provider.
+
+[[competitions]]
+key = "premier_league"
+name = "Premier League"
+country = "England"
+type = "League"
+priority = 1
+[competitions.provider_ids]
+api_football = 39
+
+[[competitions]]
+key = "la_liga"
+name = "La Liga"
+country = "Spain"
+type = "League"
+priority = 1
+[competitions.provider_ids]
+api_football = 140
+
+[[competitions]]
+key = "bundesliga"
+name = "Bundesliga"
+country = "Germany"
+type = "League"
+priority = 1
+[competitions.provider_ids]
+api_football = 78
+
+[[competitions]]
+key = "serie_a"
+name = "Serie A"
+country = "Italy"
+type = "League"
+priority = 1
+[competitions.provider_ids]
+api_football = 135
+
+[[competitions]]
+key = "ligue_1"
+name = "Ligue 1"
+country = "France"
+type = "League"
+priority = 1
+[competitions.provider_ids]
+api_football = 61
+
+[[competitions]]
+key = "champions_league"
+name = "UEFA Champions League"
+country = "World"
+type = "Cup"
+priority = 1
+[competitions.provider_ids]
+api_football = 2

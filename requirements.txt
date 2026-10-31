@@ -1,0 +1,5 @@
+# Runtime dependencies - Phase 1 (API connector).
+# Later phases (PostgreSQL, ML, bot...) will add their own dependencies.
+httpx>=0.27,<1.0
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
