@@ -13,6 +13,10 @@ class ConfigurationError(FootballAIError):
     """Invalid or missing configuration."""
 
 
+class InsufficientDataError(FootballAIError):
+    """Not enough (historical) data for the requested training / evaluation."""
+
+
 class DataProviderError(FootballAIError):
     """Base class for errors raised by external data providers."""
 

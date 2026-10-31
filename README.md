@@ -4,10 +4,11 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 8 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 9 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
 > fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
-> gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble et calibration. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble, calibration,
+> backtesting scientifique et suivi des prédictions réelles. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -110,6 +111,18 @@ Détails : [docs/features.md](docs/features.md).
 
 Détails : [docs/models.md](docs/models.md).
 
+## Fonctionnalités de la phase 9
+
+| Fonction | Détail |
+|---|---|
+| Backtest | walk-forward sur saisons de test, tous modèles + ensemble, par compétition et saison |
+| Référence marché | cotes de clôture sans marge (évaluation uniquement), même sous-ensemble pour tous |
+| Significativité | bootstrap par blocs de journées, IC 95 %, p-values |
+| Rapports | JSON + Markdown, tables de calibration |
+| Track record | prédictions immuables enregistrées avant match, évaluées automatiquement |
+
+Détails : [docs/evaluation.md](docs/evaluation.md).
+
 ## Installation
 
 Prérequis : Python **3.12+**.
@@ -179,6 +192,8 @@ football-ai build-features --check-leakage 50             # jeu de variables ver
 football-ai train-baselines --validation-seasons 2023 --test-seasons 2024 [--register]
 football-ai train-models --validation-seasons 2023 --test-seasons 2024 --tune 20 --register
 football-ai train-ensemble --validation-seasons 2022,2023 --test-seasons 2024 --evaluate-test --register
+football-ai backtest --validation-seasons 2021,2022 --test-seasons 2023,2024
+football-ai evaluate-predictions                          # track record des prédictions publiées
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -252,6 +267,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/data_quality.md](docs/data_quality.md) — nettoyage, rapprochement, contrôles qualité
 - [docs/features.md](docs/features.md) — variables et garanties anti-fuite
 - [docs/models.md](docs/models.md) — modèles, protocole d'évaluation, métriques
+- [docs/evaluation.md](docs/evaluation.md) — backtesting, significativité, track record
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -266,7 +282,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 6 | XGBoost / LightGBM | ✅ terminé |
 | 7 | Deep learning (PyTorch) | ✅ terminé |
 | 8 | Ensemble + calibration | ✅ terminé |
-| 9 | Backtesting et évaluation | à venir |
+| 9 | Backtesting et évaluation | ✅ terminé |
 | 10 | API FastAPI | à venir |
 | 11 | Bot Telegram | à venir |
 | 12 | Automatisation | à venir |

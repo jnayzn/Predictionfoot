@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from football_ai.cli import (
     api_commands,
     data_commands,
+    evaluation_commands,
     feature_commands,
     model_commands,
     quality_commands,
@@ -27,6 +28,7 @@ from football_ai.core.exceptions import (
     AuthenticationError,
     ConfigurationError,
     DataProviderError,
+    FootballAIError,
     PlanRestrictionError,
     QuotaExceededError,
 )
@@ -51,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     quality_commands.register(sub)
     feature_commands.register(sub)
     model_commands.register(sub)
+    evaluation_commands.register(sub)
     return parser
 
 
@@ -85,4 +88,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_ERROR
     except DataProviderError as exc:
         print(f"Data provider error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    except FootballAIError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR

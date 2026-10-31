@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from football_ai.core.exceptions import InsufficientDataError
 from football_ai.models.base import OutcomeModel, played_rows
 
 
@@ -32,6 +33,7 @@ def walk_forward(
     targets: pd.DataFrame,
     *,
     refit_every_days: int = 30,
+    min_train_matches: int = 30,
 ) -> WalkForwardResult:
     """``history`` = all rows available (any period); ``targets`` = rows to predict."""
     targets = targets.sort_values("kickoff_utc")
@@ -50,6 +52,11 @@ def walk_forward(
         ]
         if not window.empty:
             train = played[played["kickoff_utc"] < window_start]
+            if len(train) < min_train_matches:
+                raise InsufficientDataError(
+                    f"only {len(train)} played matches before {window_start:%Y-%m-%d} "
+                    f"(minimum {min_train_matches}); evaluate a later period"
+                )
             model = model_factory().fit(train)
             refits += 1
             probas.append(model.predict_proba(window))

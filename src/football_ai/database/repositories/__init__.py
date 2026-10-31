@@ -3,12 +3,14 @@
 from football_ai.database.repositories.fixtures import FixtureRepository, UpsertStats
 from football_ai.database.repositories.jobs import JobRepository
 from football_ai.database.repositories.match_data import MatchDataRepository
+from football_ai.database.repositories.predictions import PredictionRepository
 from football_ai.database.repositories.reference import ReferenceRepository
 
 __all__ = [
     "FixtureRepository",
     "JobRepository",
     "MatchDataRepository",
+    "PredictionRepository",
     "ReferenceRepository",
     "UpsertStats",
 ]

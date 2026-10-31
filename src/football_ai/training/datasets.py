@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from football_ai.core.exceptions import InsufficientDataError
 from football_ai.models.base import played_rows
 
 
@@ -57,6 +58,12 @@ def split_by_seasons(
     train = data[data["season_year"] < first_eval] if first_eval is not None else data
     validation = data[data["season_year"].isin(valid_set)]
     test = data[data["season_year"].isin(test_set)]
+    if first_eval is not None and train.empty:
+        available = sorted(data["season_year"].unique().tolist())
+        raise InsufficientDataError(
+            f"no training season before {first_eval} (available seasons: {available}); "
+            "choose later validation/test seasons or import older data"
+        )
     _check_order(train, validation, test)
     return TemporalSplit(train, validation, test)
 
