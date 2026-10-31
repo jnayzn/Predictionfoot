@@ -1,0 +1,10 @@
+# Manual overrides for cross-source team matching.
+#
+# Matching is data-driven (teams playing the same fixtures on the same days with
+# the same scores), so this file is normally empty. Add an entry only when
+# `football-ai build-matches` reports an unresolved or wrong team.
+#
+# [[aliases]]
+# provider = "football_data_uk"     # provider of the team to link
+# name = "Man United"               # its name in that provider
+# canonical = "Manchester United"   # canonical team name (= API-Football name)

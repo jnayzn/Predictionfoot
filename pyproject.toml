@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "football-ai-predictor"
-version = "0.2.0"
+version = "0.3.0"
 description = "Football AI Predictor - probabilistic football match analysis "
 readme = "README.md"
 requires-python = ">=3.12"
@@ -16,6 +16,8 @@ dependencies = [
     "sqlalchemy>=2.0.30,<3.0",
     "alembic>=1.13,<2.0",
     "psycopg[binary]>=3.1,<4.0",
+    "pandas>=2.2",
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +27,7 @@ dev = [
     "respx>=0.21",
     "ruff>=0.5",
     "mypy>=1.10",
+    "pandas-stubs",
 ]
 
 [project.scripts]

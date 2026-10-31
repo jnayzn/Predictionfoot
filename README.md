@@ -4,13 +4,14 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 2 terminée** — connecteur API-Football, base PostgreSQL, ETL et
-> import historique. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> **État actuel : PHASE 3 terminée** — connecteur API-Football, base PostgreSQL, ETL,
+> import historique, rapprochement multi-sources et contrôles qualité. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
 - [Fonctionnalités de la phase 1](#fonctionnalités-de-la-phase-1)
 - [Fonctionnalités de la phase 2](#fonctionnalités-de-la-phase-2)
+- [Fonctionnalités de la phase 3](#fonctionnalités-de-la-phase-3)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Utilisation (CLI)](#utilisation-cli)
@@ -49,6 +50,19 @@ des modèles statistiques et du machine learning.
 | Blessures, classements, cotes | collecte et normalisation (1x2, over/under, BTTS, double chance) |
 | Rejeu | reconstruction complète de la base depuis l'archive JSON brute, sans aucun appel API |
 | Seconde source | CSV football-data.co.uk (gratuit) : résultats, statistiques, cotes d'ouverture et de clôture depuis les années 1990 |
+
+## Fonctionnalités de la phase 3
+
+| Fonction | Détail |
+|---|---|
+| Rapprochement multi-sources | équipes reliées entre API-Football et football-data.co.uk par les matchs communs (date + score), avec confiance et preuves ; jamais de fusion sans preuve |
+| Couche canonique | `canonical_teams`, `matches` : un match réel = une ligne, score à 90 min, sources liées, conflits détectés |
+| Exclusions traçables | `valid_for_training` + raison (forfait, abandon, conflit de sources, score manquant...) |
+| Contrôles qualité | doublons, double programmation, scores aberrants, résultats non mis à jour, saisons incomplètes, cohérence des stats et des cotes |
+| Couverture | % de matchs avec stats, xG, compositions, cotes, par compétition et saison |
+| Historique qualité | rapports JSON + table `data_quality_reports` |
+
+Détails : [docs/data_quality.md](docs/data_quality.md).
 
 ## Installation
 
@@ -113,6 +127,8 @@ football-ai import-csv --competition serie_a --seasons 2023 --file I1.csv
 football-ai replay                                        # reconstruit la base depuis var/raw
 football-ai jobs                                          # avancement de l'import
 football-ai db-stats                                      # volumes par table
+football-ai build-matches                                 # couche canonique multi-sources
+football-ai quality-report [--competition ligue_1] [--json] [--fail-on-error]
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -147,6 +163,7 @@ structure documentée de l'API mais leurs valeurs sont inventées (voir `tests/c
 
 ```
 configs/competitions.toml          catalogue des compétitions (clé interne -> id par fournisseur)
+configs/team_aliases.toml          overrides manuels du rapprochement d'équipes
 migrations/                        migrations Alembic
 scripts/                           scripts d'exploitation (import historique quotidien)
 src/football_ai/
@@ -157,6 +174,8 @@ src/football_ai/
   data/collectors/api_football/    client HTTP, quotas, parsers, provider
   data/collectors/football_data_uk/  CSV historiques football-data.co.uk
   data/pipeline/                   ETL, import historique, rejeu de l'archive
+  data/cleaning/                   rapprochement multi-sources, couche canonique
+  data/quality/                    contrôles qualité du jeu de données, rapports
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -173,6 +192,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 
 - [docs/architecture.md](docs/architecture.md) — architecture et décisions techniques
 - [docs/database.md](docs/database.md) — schéma et garanties d'intégrité
+- [docs/data_quality.md](docs/data_quality.md) — nettoyage, rapprochement, contrôles qualité
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -181,7 +201,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 |---|---|---|
 | 1 | Initialisation + connecteur API-Football | ✅ terminé (validé par mocks, à valider avec une vraie clé) |
 | 2 | Collecte historique + PostgreSQL | ✅ terminé (validé sur PostgreSQL 16 avec API simulée) |
-| 3 | Nettoyage et validation | à venir |
+| 3 | Nettoyage et validation | ✅ terminé |
 | 4 | Feature engineering | à venir |
 | 5 | Poisson / modèle de référence | à venir |
 | 6 | XGBoost / LightGBM | à venir |

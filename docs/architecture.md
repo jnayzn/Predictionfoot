@@ -58,6 +58,17 @@ interfaces, jamais d'un fournisseur concret.
 | `data/pipeline/replay.py` | Reconstruction de la base depuis l'archive JSON brute (0 requête). |
 | `cli/` | CLI découpée : `api_commands` (phase 1), `data_commands` (phase 2). |
 
+## Phase 3 — composants
+
+| Module | Rôle |
+|---|---|
+| `data/cleaning/team_resolution.py` | Rapprochement d'équipes entre sources par co-occurrence de matchs (fonctions pures). |
+| `data/cleaning/names.py` | Normalisation des noms (indice secondaire). |
+| `data/cleaning/canonical.py` | Construction des équipes canoniques, liens, matchs canoniques, exclusions. |
+| `data/quality/checks.py` | Contrôles au niveau du jeu de données + couverture (pandas). |
+| `data/quality/report.py` | Persistance (JSON + table `data_quality_reports`) et affichage. |
+| `config/aliases.py` | Overrides manuels de rapprochement. |
+
 ## Décisions techniques (ADR résumés)
 
 ### ADR-001 — Layout `src/football_ai/`
@@ -139,3 +150,18 @@ football-data.co.uk fournit gratuitement résultats, statistiques de base et cot
 (ouverture et clôture) depuis les années 1990 pour les 5 grands championnats. C'est la
 base la plus profonde disponible sans budget ; elle est stockée sous son propre
 `provider` et sera rapprochée d'API-Football en phase 3.
+
+### ADR-016 — Rapprochement d'équipes par les matchs plutôt que par les noms
+Les noms diffèrent trop entre sources (abréviations, accents, sponsors) et une table d'alias
+écrite à la main serait incomplète et invérifiable. Les matchs communs (date ±1 jour + score)
+fournissent une preuve objective et mesurable ; chaque lien porte sa confiance et ses preuves.
+Les cas sans preuve suffisante ne sont jamais fusionnés.
+
+### ADR-017 — Couche canonique séparée des données sources
+Les tables sources (`fixtures`...) restent fidèles à chaque fournisseur ; `matches` et
+`canonical_teams` sont dérivées et reconstructibles à tout moment. Les modèles (phases 4+)
+lisent uniquement la couche canonique.
+
+### ADR-018 — Exclusion explicite plutôt que suppression
+Un match douteux n'est jamais supprimé : il est marqué `valid_for_training = false` avec une
+raison, ce qui rend les choix de nettoyage traçables et réversibles.

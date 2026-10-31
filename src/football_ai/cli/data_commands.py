@@ -87,6 +87,7 @@ def cmd_db_stats(settings: Settings) -> int:
         db.League, db.Season, db.Team, db.Player, db.Fixture, db.ActualResult,
         db.TeamStatistics, db.PlayerStatistics, db.Lineup, db.Injury, db.Standing, db.Odds,
         db.Prediction, db.ModelVersion, db.DataChangeLog, db.IngestionJob,
+        db.CanonicalTeam, db.TeamLink, db.Match, db.MatchSource, db.DataQualityReport,
     ]  # fmt: skip
     with session_scope(factory) as session:
         for model in tables:

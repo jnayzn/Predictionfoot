@@ -543,3 +543,83 @@ class IngestionJob(Base):
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime, default=utcnow, onupdate=utcnow, server_default=func.now()
     )
+
+
+# ============================================== canonical (cross-source) layer
+class CanonicalTeam(TimestampMixin, Base):
+    """One real-world club, whatever the number of sources describing it."""
+
+    __tablename__ = "canonical_teams"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), index=True)
+    country: Mapped[str | None] = mapped_column(String(64))
+
+
+class TeamLink(Base):
+    """Links a provider team row to its canonical team."""
+
+    __tablename__ = "team_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), unique=True)
+    canonical_team_id: Mapped[int] = mapped_column(
+        ForeignKey("canonical_teams.id", ondelete="CASCADE"), index=True
+    )
+    method: Mapped[str] = mapped_column(String(32))  # primary | cooccurrence | alias | standalone
+    confidence: Mapped[float] = mapped_column(Float)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class Match(TimestampMixin, Base):
+    """Canonical match built from one or several provider fixtures."""
+
+    __tablename__ = "matches"
+    __table_args__ = (
+        CheckConstraint("home_team_id <> away_team_id", name="distinct_teams"),
+        Index("ix_matches_competition_season", "competition_key", "season_year"),
+        Index("ix_matches_home_kickoff", "home_team_id", "kickoff_utc"),
+        Index("ix_matches_away_kickoff", "away_team_id", "kickoff_utc"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    competition_key: Mapped[str] = mapped_column(String(64))
+    season_year: Mapped[int] = mapped_column(Integer)
+    round: Mapped[str | None] = mapped_column(String(128))
+    kickoff_utc: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+    kickoff_time_known: Mapped[bool] = mapped_column(Boolean, default=True)
+    home_team_id: Mapped[int] = mapped_column(ForeignKey("canonical_teams.id"))
+    away_team_id: Mapped[int] = mapped_column(ForeignKey("canonical_teams.id"))
+    status_group: Mapped[str] = mapped_column(String(16), index=True)
+    home_goals: Mapped[int | None] = mapped_column(Integer)  # 90-minute score
+    away_goals: Mapped[int | None] = mapped_column(Integer)
+    ht_home_goals: Mapped[int | None] = mapped_column(Integer)
+    ht_away_goals: Mapped[int | None] = mapped_column(Integer)
+    primary_fixture_id: Mapped[int] = mapped_column(ForeignKey("fixtures.id"))
+    sources: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    source_conflict: Mapped[bool] = mapped_column(Boolean, default=False)
+    valid_for_training: Mapped[bool] = mapped_column(Boolean, default=True)
+    exclusion_reason: Mapped[str | None] = mapped_column(String(128))
+
+
+class MatchSource(Base):
+    __tablename__ = "match_sources"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), index=True)
+    fixture_id: Mapped[int] = mapped_column(
+        ForeignKey("fixtures.id", ondelete="CASCADE"), unique=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+
+
+class DataQualityReport(Base):
+    __tablename__ = "data_quality_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    scope: Mapped[str] = mapped_column(String(128))
+    errors: Mapped[int] = mapped_column(Integer)
+    warnings: Mapped[int] = mapped_column(Integer)
+    summary: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)

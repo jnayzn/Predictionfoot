@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     log_format: Literal["json", "console"] = "console"
     data_dir: Path = Path("var")
     competitions_file: Path = Path("configs/competitions.toml")
+    team_aliases_file: Path = Path("configs/team_aliases.toml")
     database_url: str = "postgresql+psycopg://football:football@localhost:5432/football_ai"
     database_echo: bool = False
 

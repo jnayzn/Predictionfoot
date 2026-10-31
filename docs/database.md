@@ -37,6 +37,11 @@ football-ai db-stats               # nombre de lignes par table
 | `predictions` | prédictions **avant match**, **immuables** | fixture, model_version, created_at |
 | `prediction_evaluations` | évaluation de chaque prédiction après le match (log loss, Brier...) | prediction_id |
 | `ingestion_jobs` | avancement de l'import historique (reprise) | provider, job_type, scope |
+| `canonical_teams` | clubs réels, toutes sources confondues | — |
+| `team_links` | équipe source → équipe canonique (méthode, confiance, preuves) | team_id |
+| `matches` | matchs canoniques (score 90 min, sources, conflit, `valid_for_training`, raison d'exclusion) | — |
+| `match_sources` | matchs sources composant un match canonique | fixture_id |
+| `data_quality_reports` | historique des rapports qualité | — |
 
 ## Garanties d'intégrité scientifique
 
@@ -49,5 +54,6 @@ football-ai db-stats               # nombre de lignes par table
 ## Sources multiples
 
 Chaque fournisseur a ses propres lignes (`provider`). Un même match peut donc exister
-une fois par source (ex. API-Football et football-data.co.uk). Le rapprochement entre
-sources (équipes, matchs) est l'objet de la Phase 3.
+une fois par source (ex. API-Football et football-data.co.uk). La couche canonique
+(`canonical_teams`, `team_links`, `matches`, `match_sources`) les rapproche — voir
+[data_quality.md](data_quality.md).
