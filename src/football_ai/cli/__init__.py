@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from football_ai.cli import (
+    account_commands,
     api_commands,
     automation_commands,
     bot_commands,
@@ -61,6 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
     server_commands.register(sub)
     bot_commands.register(sub)
     automation_commands.register(sub)
+    account_commands.register(sub)
     return parser
 
 

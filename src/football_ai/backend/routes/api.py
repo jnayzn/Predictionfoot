@@ -108,10 +108,28 @@ def subscribe(svc: Svc, body: SubscriberIn) -> SubscriberOut:
 
 
 @router.delete("/subscribers/{chat_id}", tags=["notifications"])
-def unsubscribe(svc: Svc, chat_id: int) -> dict[str, bool]:
+def unsubscribe(svc: Svc, chat_id: int, erase: bool = False) -> dict[str, bool]:
+    """Unsubscribe; ``erase=true`` deletes every stored personal data (GDPR)."""
+    if erase:
+        return {"erased": svc.erase_subscriber(chat_id)}
     return {"unsubscribed": svc.unsubscribe(chat_id)}
 
 
 @router.get("/subscribers", response_model=list[SubscriberOut], tags=["notifications"])
 def subscribers(svc: Svc) -> list[SubscriberOut]:
     return svc.subscribers()
+
+
+@router.get("/usage", tags=["account"])
+def usage(svc: Svc, request: Request) -> dict[str, object]:
+    """Daily usage of the calling client over the last 31 days."""
+    identity = getattr(request.state, "client", None)
+    if identity is None:
+        return {"client": "admin", "plan": None, "usage": []}
+    return {
+        "client": identity.name,
+        "plan": identity.plan,
+        "daily_quota": identity.daily_quota,
+        "rate_limit_per_minute": identity.rate_limit_per_minute,
+        "usage": svc.client_usage(identity.id),
+    }

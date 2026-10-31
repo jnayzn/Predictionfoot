@@ -656,3 +656,33 @@ class ScheduledJobRun(Base):
     requests_used: Mapped[int] = mapped_column(Integer, default=0)
     details: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)
     error: Mapped[str | None] = mapped_column(Text)
+
+
+# ============================================================== commercial API
+class ApiClient(Base):
+    """A customer of the HTTP API. Only a SHA-256 hash of the key is stored."""
+
+    __tablename__ = "api_clients"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    key_prefix: Mapped[str] = mapped_column(String(12), index=True)  # for identification only
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    plan: Mapped[str] = mapped_column(String(32))
+    daily_quota: Mapped[int] = mapped_column(Integer)
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
+class ApiUsage(Base):
+    """Requests per client and UTC day (metering / billing)."""
+
+    __tablename__ = "api_usage"
+    __table_args__ = (UniqueConstraint("client_id", "day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("api_clients.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    requests: Mapped[int] = mapped_column(Integer, default=0)

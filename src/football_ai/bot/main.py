@@ -27,6 +27,7 @@ COMMANDS = [
     BotCommand(command="results", description="Résultats et vérification"),
     BotCommand(command="performance", description="Performances du système"),
     BotCommand(command="subscribe", description="Rapport quotidien"),
+    BotCommand(command="privacy", description="Données personnelles"),
     BotCommand(command="help", description="Aide"),
 ]
 

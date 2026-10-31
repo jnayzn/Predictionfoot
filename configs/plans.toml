@@ -1,0 +1,17 @@
+# Commercial API plans. Limits are enforced per API client (football-ai api-keys).
+# daily_quota: requests per UTC day; rate_limit_per_minute: burst limit.
+
+[plans.free]
+daily_quota = 100
+rate_limit_per_minute = 10
+description = "Discovery - predictions of the day"
+
+[plans.pro]
+daily_quota = 5000
+rate_limit_per_minute = 60
+description = "Individual analysts and content creators"
+
+[plans.business]
+daily_quota = 50000
+rate_limit_per_minute = 300
+description = "Media and platforms (contract, SLA)"

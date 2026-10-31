@@ -38,6 +38,17 @@ class SubscriberRepository:
         self.session.flush()
         return True
 
+    def erase(self, chat_id: int) -> bool:
+        """Delete every stored personal data of the chat (GDPR right to erasure)."""
+        row = self.session.scalar(
+            select(db.TelegramSubscriber).where(db.TelegramSubscriber.chat_id == chat_id)
+        )
+        if row is None:
+            return False
+        self.session.delete(row)
+        self.session.flush()
+        return True
+
     def active(self) -> list[db.TelegramSubscriber]:
         return list(
             self.session.scalars(

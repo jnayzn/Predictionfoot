@@ -249,3 +249,23 @@ def test_prediction_count(world: dict[str, Any]) -> None:
     with session_scope(world["factory"]) as s:
         assert (s.scalar(select(func.count()).select_from(db.Prediction)) or 0) >= 1
     assert datetime.now(UTC) - timedelta(days=1) < datetime.now(UTC)
+
+
+def test_engine_memoizes_until_invalidated(world: dict[str, Any]) -> None:
+    fresh = PredictionEngine(world["factory"])
+    calls: list[int] = []
+    original = fresh._compute
+
+    def counting(ids: Any, frames: Any) -> Any:
+        calls.append(len(ids))
+        return original(ids, frames)
+
+    fresh._compute = counting  # type: ignore[method-assign]
+    ids = world["seeded"].upcoming_match_ids
+    first = fresh.predict(ids[:1])
+    assert calls == [len(ids)]  # one pass for every upcoming match
+    assert fresh.predict(ids[1:2])[0].match_id == ids[1] and len(calls) == 1  # served from memory
+    assert fresh.predict(ids[:1])[0] is first[0]
+    fresh.invalidate()
+    fresh.predict(ids[:1])
+    assert len(calls) == 2

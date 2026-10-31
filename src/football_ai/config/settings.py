@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     competitions_file: Path = Path("configs/competitions.toml")
     team_aliases_file: Path = Path("configs/team_aliases.toml")
     schedule_file: Path = Path("configs/schedule.toml")
+    plans_file: Path = Path("configs/plans.toml")
     database_url: str = "postgresql+psycopg://football:football@localhost:5432/football_ai"
     database_echo: bool = False
 

@@ -292,6 +292,15 @@ class FootballService:
             ),
         )
 
+    # ------------------------------------------------------------ account
+    def client_usage(self, client_id: int, days: int = 31) -> list[dict[str, Any]]:
+        from football_ai.database.repositories import ApiClientRepository
+
+        since = datetime.now(UTC).date() - timedelta(days=days)
+        with session_scope(self.session_factory) as session:
+            rows = ApiClientRepository(session).usage(client_id, since)
+        return [{"day": d.isoformat(), "requests": n} for _, d, n in rows]
+
     # -------------------------------------------------------- subscribers
     def subscribe(
         self, chat_id: int, username: str | None, competitions: list[str]
@@ -311,6 +320,10 @@ class FootballService:
     def unsubscribe(self, chat_id: int) -> bool:
         with session_scope(self.session_factory) as session:
             return SubscriberRepository(session).unsubscribe(chat_id)
+
+    def erase_subscriber(self, chat_id: int) -> bool:
+        with session_scope(self.session_factory) as session:
+            return SubscriberRepository(session).erase(chat_id)
 
     def subscribers(self) -> list[SubscriberOut]:
         with session_scope(self.session_factory) as session:

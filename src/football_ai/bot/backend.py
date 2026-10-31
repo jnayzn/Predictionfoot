@@ -58,6 +58,7 @@ class BotBackend(Protocol):
         self, chat_id: int, username: str | None, competitions: list[str]
     ) -> SubscriberOut: ...
     async def unsubscribe(self, chat_id: int) -> bool: ...
+    async def erase(self, chat_id: int) -> bool: ...
     async def subscribers(self) -> list[SubscriberOut]: ...
 
 
@@ -110,6 +111,9 @@ class ServiceBackend:
 
     async def unsubscribe(self, chat_id: int) -> bool:
         return await self._call(self.service.unsubscribe, chat_id)
+
+    async def erase(self, chat_id: int) -> bool:
+        return await self._call(self.service.erase_subscriber, chat_id)
 
     async def subscribers(self) -> list[SubscriberOut]:
         return await self._call(self.service.subscribers)
@@ -209,6 +213,12 @@ class HttpBackend:
             "DELETE", f"/v1/subscribers/{chat_id}", dict[str, bool]
         )
         return bool(data.get("unsubscribed"))
+
+    async def erase(self, chat_id: int) -> bool:
+        data: dict[str, bool] = await self._request(
+            "DELETE", f"/v1/subscribers/{chat_id}", dict[str, bool], params={"erase": "true"}
+        )
+        return bool(data.get("erased"))
 
     async def subscribers(self) -> list[SubscriberOut]:
         result: list[SubscriberOut] = await self._request(

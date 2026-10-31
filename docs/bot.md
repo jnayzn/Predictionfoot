@@ -31,6 +31,7 @@ Dans les deux cas le bot ne contient **aucune règle métier** : il passe par l'
 | `/results [AAAA-MM-JJ]` | résultats + ✅/❌ de la prédiction publiée avant le match |
 | `/performance` | track record réel + résumé du dernier backtest |
 | `/subscribe [compétitions]`, `/unsubscribe` | rapport quotidien automatique (consentement explicite) |
+| `/privacy`, `/forget` | information RGPD ; effacement définitif des données de l'utilisateur |
 | `/help` | aide |
 
 ## Robustesse et sécurité

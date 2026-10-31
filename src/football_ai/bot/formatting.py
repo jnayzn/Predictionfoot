@@ -272,6 +272,7 @@ HELP = (
 /results [AAAA-MM-JJ] — résultats et vérification des prédictions
 /performance — performances historiques du système
 /subscribe, /unsubscribe — rapport quotidien automatique
+/privacy — données personnelles ; /forget — les effacer
 /help — cette aide
 
 """

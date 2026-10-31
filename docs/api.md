@@ -19,6 +19,13 @@ Documentation interactive : `http://localhost:8000/docs` (OpenAPI).
 - Erreurs normalisées `{"error", "request_id"}` : 404 ressource inconnue, 503 aucun modèle
   en production, 422 données insuffisantes, 500 sans fuite d'information interne.
 
+## Clients commerciaux
+
+Outre les clés d'administration (`API_KEYS`), des clés clients sont gérées en base
+(`football-ai api-keys create/list/revoke`), stockées uniquement sous forme de hachage SHA-256,
+avec offre (quota quotidien, débit par minute) et comptage de l'usage (`/v1/usage`,
+`football-ai api-usage`). Voir [commercialization.md](commercialization.md).
+
 ## Endpoints
 
 | Méthode | Chemin | Description |
@@ -34,6 +41,8 @@ Documentation interactive : `http://localhost:8000/docs` (OpenAPI).
 | GET | `/v1/compare?home=&away=` | confrontation hypothétique (même modèle, variables à la date du jour) |
 | GET | `/v1/results?day=` | résultats + prédiction publiée et exactitude |
 | GET | `/v1/performance` | track record (prédictions publiées) + dernier backtest |
+| GET | `/v1/usage` | offre, quotas et usage quotidien du client appelant |
+| POST/GET/DELETE | `/v1/subscribers` | abonnements Telegram (interne) ; `DELETE ...?erase=true` = effacement RGPD |
 
 ## Couche de services
 

@@ -25,8 +25,31 @@ async def unsubscribe(message: Message, backend: BotBackend) -> None:
     await message.answer("Rapport quotidien désactivé." if done else "Vous n'étiez pas abonné.")
 
 
+PRIVACY = (
+    "<b>Données personnelles</b>\n\n"
+    "Sans abonnement, le bot ne conserve <b>aucune</b> donnée vous concernant.\n"
+    "Avec /subscribe, il conserve : l'identifiant du chat, votre nom d'utilisateur Telegram et "
+    "les compétitions choisies, dans le seul but d'envoyer le rapport quotidien.\n"
+    "Ces données ne sont ni vendues ni partagées.\n\n"
+    "/unsubscribe arrête les envois ; /forget efface définitivement vos données."
+)
+
+
+async def privacy(message: Message) -> None:
+    await message.answer(PRIVACY)
+
+
+async def forget(message: Message, backend: BotBackend) -> None:
+    erased = await backend.erase(message.chat.id)
+    await message.answer(
+        "Vos données ont été définitivement supprimées." if erased else "Aucune donnée à supprimer."
+    )
+
+
 def build_router() -> Router:
     router = Router(name="subscriptions")
     router.message.register(subscribe, Command("subscribe"))
     router.message.register(unsubscribe, Command("unsubscribe"))
+    router.message.register(privacy, Command("privacy"))
+    router.message.register(forget, Command("forget"))
     return router

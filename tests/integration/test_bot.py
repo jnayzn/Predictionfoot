@@ -244,6 +244,7 @@ async def test_http_backend_against_the_api(
         await http.analysis(999999)
     sub = await http.subscribe(555, None, [])
     assert sub.active and await http.unsubscribe(555)
+    assert await http.erase(555) is True and await http.erase(555) is False
     await http.aclose()
 
 

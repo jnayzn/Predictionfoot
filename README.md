@@ -4,13 +4,18 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 13 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : les 14 phases sont implémentées et testées** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
 > fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
 > gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble, calibration,
 > backtesting scientifique, suivi des prédictions réelles, moteur d'analyse et de
 > recommandation, API FastAPI sécurisée, bot Telegram, automatisation planifiée, Docker,
-> sauvegardes, monitoring Prometheus et détection de dérive. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> sauvegardes, monitoring Prometheus, détection de dérive et offre API commerciale.
+>
+> ⚠️ **Aucune évaluation sur données réelles n'a encore été réalisée** : l'environnement de
+> développement n'avait accès à aucune source de données. Tous les tests utilisent des
+> réponses API simulées et des ligues **synthétiques**. Voir le plan de validation dans
+> [docs/commercialization.md](docs/commercialization.md#8-validation-sur-données-réelles--prérequis-au-lancement). Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -174,6 +179,17 @@ Détails : [docs/automation.md](docs/automation.md).
 
 Détails : [docs/deployment.md](docs/deployment.md).
 
+## Fonctionnalités de la phase 14
+
+| Fonction | Détail |
+|---|---|
+| Performance | prédictions mises en cache (≈570 ms → ≈0 ms par requête), image Docker −39 % |
+| Offre API | clients en base (clés hachées), offres (`configs/plans.toml`), quotas, comptage de l'usage, `/v1/usage` |
+| RGPD | `/privacy` et `/forget` dans le bot, effacement via l'API |
+| Préparation | licences, réglementation, RGPD, sécurité, montée en charge, plan de validation |
+
+Détails : [docs/commercialization.md](docs/commercialization.md).
+
 ## Démarrage rapide (Docker)
 
 ```bash
@@ -257,6 +273,8 @@ football-ai serve --host 0.0.0.0 --port 8000              # API (docs : /docs)
 football-ai bot                                           # bot Telegram (TELEGRAM_BOT_TOKEN)
 football-ai scheduler                                     # tâches planifiées
 football-ai run-job sync_fixtures                         # une tâche immédiatement
+football-ai api-keys create --name "Client" --plan pro    # clé API commerciale (affichée une fois)
+football-ai api-usage --days 30                           # usage par client (facturation)
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -293,6 +311,7 @@ structure documentée de l'API mais leurs valeurs sont inventées (voir `tests/c
 configs/competitions.toml          catalogue des compétitions (clé interne -> id par fournisseur)
 configs/team_aliases.toml          overrides manuels du rapprochement d'équipes
 configs/schedule.toml              horaires des tâches planifiées
+configs/plans.toml                 offres commerciales de l'API
 migrations/                        migrations Alembic
 scripts/                           scripts d'exploitation (import historique quotidien)
 src/football_ai/
@@ -344,14 +363,15 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/bot.md](docs/bot.md) — bot Telegram
 - [docs/automation.md](docs/automation.md) — tâches planifiées, quotas, alertes
 - [docs/deployment.md](docs/deployment.md) — Docker, sauvegardes, monitoring, CI
+- [docs/commercialization.md](docs/commercialization.md) — optimisation, offre, licences, RGPD, validation
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
 
 | Phase | Contenu | État |
 |---|---|---|
-| 1 | Initialisation + connecteur API-Football | ✅ terminé (validé par mocks, à valider avec une vraie clé) |
-| 2 | Collecte historique + PostgreSQL | ✅ terminé (validé sur PostgreSQL 16 avec API simulée) |
+| 1 | Initialisation + connecteur API-Football | ✅ terminé (validé par mocks) |
+| 2 | Collecte historique + PostgreSQL | ✅ terminé (PostgreSQL 16, API simulée) |
 | 3 | Nettoyage et validation | ✅ terminé |
 | 4 | Feature engineering | ✅ terminé |
 | 5 | Poisson / modèle de référence | ✅ terminé |
@@ -363,7 +383,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 11 | Bot Telegram | ✅ terminé |
 | 12 | Automatisation | ✅ terminé |
 | 13 | Docker, déploiement, monitoring | ✅ terminé |
-| 14 | Optimisation, commercialisation | à venir |
+| 14 | Optimisation, commercialisation | ✅ terminé (validation sur données réelles à faire) |
 
 ## Avertissement
 

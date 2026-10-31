@@ -152,6 +152,8 @@ class PredictionEngine:
         self._frames_loaded_at = 0.0
         self._ttl = frames_ttl_seconds
         self._clock = clock
+        # predictions computed from the current frames + model (invalidated with them)
+        self._cache: dict[int, MatchPrediction] = {}
 
     # ------------------------------------------------------------ resources
     @property
@@ -170,12 +172,14 @@ class PredictionEngine:
             with session_scope(self.session_factory) as session:
                 self._frames = load_base_frames(session)
             self._frames_loaded_at = self._clock()
+            self._cache.clear()
         return self._frames
 
     def invalidate(self) -> None:
         """Drop caches (new data or new model available)."""
         self._frames = None
         self._production = None
+        self._cache.clear()
 
     def _team_names(self, ids: set[int]) -> dict[int, str]:
         with session_scope(self.session_factory) as session:
@@ -190,9 +194,28 @@ class PredictionEngine:
     def predict(
         self, match_ids: Sequence[int], *, frames: BaseFrames | None = None
     ) -> list[MatchPrediction]:
+        """Predictions for the given matches.
+
+        With the engine's own (cached) data, results are memoized until the data
+        or the model is reloaded; a cache miss computes every upcoming match in
+        the same pass, so the following requests are served from memory.
+        """
         if not match_ids:
             return []
-        frames = frames if frames is not None else self.frames()
+        if frames is None:
+            frames = self.frames()
+            missing = [int(m) for m in match_ids if int(m) not in self._cache]
+            if missing:
+                upcoming = frames.matches.loc[
+                    frames.matches["status_group"] == "scheduled", "match_id"
+                ].astype(int)
+                batch = list(dict.fromkeys([*missing, *upcoming.tolist()]))
+                for p in self._compute(batch, frames):
+                    self._cache[p.match_id] = p
+            return [self._cache[int(m)] for m in match_ids]
+        return self._compute(list(match_ids), frames)
+
+    def _compute(self, match_ids: Sequence[int], frames: BaseFrames) -> list[MatchPrediction]:
         known_ids = set(frames.matches["match_id"].astype(int))
         missing = [m for m in match_ids if int(m) not in known_ids]
         if missing:
