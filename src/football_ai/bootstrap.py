@@ -6,6 +6,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
+from sqlalchemy.orm import Session, sessionmaker
+
 from football_ai.config.competitions import CompetitionConfig, load_competitions
 from football_ai.config.settings import Settings
 from football_ai.core.logging import redaction_filter
@@ -16,6 +18,7 @@ from football_ai.data.collectors.api_football import (
 )
 from football_ai.data.storage.raw_archive import RawArchive
 from football_ai.data.storage.response_cache import ResponseCache
+from football_ai.database.connection import create_db_engine, create_session_factory
 
 
 def build_quota_manager(settings: Settings) -> QuotaManager:
@@ -53,3 +56,9 @@ async def api_football_context(settings: Settings) -> AsyncIterator[ApiFootballC
             provider=ApiFootballProvider(client, competitions, cfg),
             competitions=competitions,
         )
+
+
+def build_session_factory(settings: Settings) -> sessionmaker[Session]:
+    return create_session_factory(
+        create_db_engine(settings.database_url, echo=settings.database_echo)
+    )

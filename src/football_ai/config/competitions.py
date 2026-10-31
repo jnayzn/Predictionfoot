@@ -18,9 +18,9 @@ class CompetitionConfig(BaseModel):
     country: str
     type: str
     priority: int = 1
-    provider_ids: dict[str, int]
+    provider_ids: dict[str, int | str]
 
-    def provider_id(self, provider: str) -> int | None:
+    def provider_id(self, provider: str) -> int | str | None:
         return self.provider_ids.get(provider)
 
 

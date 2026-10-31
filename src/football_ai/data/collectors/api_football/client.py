@@ -136,6 +136,7 @@ class ApiFootballClient:
         self._rng = rng
         self._clock = clock
         self._inflight: dict[str, asyncio.Future[ApiResponse]] = {}
+        self.requests_sent = 0  # network attempts made by this client instance
 
     # --------------------------------------------------------------- lifecycle
     async def __aenter__(self) -> ApiFootballClient:
@@ -268,6 +269,8 @@ class ApiFootballClient:
 
         for attempt in range(max_attempts):
             await self._quota.acquire(counts_against_daily=counts)
+            if counts:
+                self.requests_sent += 1
             started = time.perf_counter()
             try:
                 payload, status_code = await self._send(endpoint, params, key)

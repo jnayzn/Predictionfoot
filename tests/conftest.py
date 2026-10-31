@@ -224,3 +224,84 @@ def quota_headers(remaining: int, limit: int = 100) -> dict[str, str]:
         "X-RateLimit-Limit": "10",
         "X-RateLimit-Remaining": "9",
     }
+
+
+# ------------------------------------------------------------------- database
+# Every DB test runs on SQLite; it also runs on PostgreSQL when TEST_DATABASE_URL
+# is set (e.g. postgresql+psycopg://postgres@127.0.0.1:5432/football_ai_test).
+import os  # noqa: E402
+
+from sqlalchemy import Engine, text  # noqa: E402
+from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
+
+from football_ai.database.connection import create_db_engine, create_session_factory  # noqa: E402
+from football_ai.database.models import Base  # noqa: E402
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+DB_BACKENDS = ["sqlite"] + (["postgresql"] if TEST_DATABASE_URL else [])
+
+
+def alembic_upgrade(url: str, revision: str = "head") -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(ROOT / "migrations"))
+    cfg.cmd_opts = argparse_namespace(url)
+    command.upgrade(cfg, revision)
+
+
+def alembic_downgrade(url: str, revision: str = "base") -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(ROOT / "migrations"))
+    cfg.cmd_opts = argparse_namespace(url)
+    command.downgrade(cfg, revision)
+
+
+def argparse_namespace(url: str) -> Any:
+    import argparse
+
+    return argparse.Namespace(x=[f"url={url}"])
+
+
+@pytest.fixture(scope="session")
+def pg_engine() -> Any:
+    if not TEST_DATABASE_URL:
+        pytest.skip("TEST_DATABASE_URL not set")
+    engine = create_db_engine(TEST_DATABASE_URL)
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+    alembic_upgrade(TEST_DATABASE_URL)  # the real migration, not create_all
+    yield engine
+    engine.dispose()
+
+
+def _truncate_all(engine: Engine) -> None:
+    names = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture(params=DB_BACKENDS)
+def session_factory(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
+    if request.param == "sqlite":
+        engine = create_db_engine(f"sqlite:///{tmp_path / 'test.db'}")
+        Base.metadata.create_all(engine)
+        yield create_session_factory(engine)
+        engine.dispose()
+    else:
+        engine = request.getfixturevalue("pg_engine")
+        _truncate_all(engine)
+        yield create_session_factory(engine)
+
+
+@pytest.fixture
+def session(session_factory: sessionmaker[Session]) -> Any:
+    s = session_factory()
+    yield s
+    s.rollback()
+    s.close()

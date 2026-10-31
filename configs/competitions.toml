@@ -5,6 +5,8 @@
 # provider can be added without touching the prediction engine.
 # `name` / `country` are used to VERIFY the provider mapping during discovery
 # (a mismatch is reported as a data-quality issue, never silently accepted).
+# football_data_uk = division code of https://www.football-data.co.uk CSV files
+# (no Champions League there).
 #
 # To add a competition: append a new [[competitions]] block, then run
 # `football-ai discover` to verify the mapping against the provider.
@@ -17,6 +19,7 @@ type = "League"
 priority = 1
 [competitions.provider_ids]
 api_football = 39
+football_data_uk = "E0"
 
 [[competitions]]
 key = "la_liga"
@@ -26,6 +29,7 @@ type = "League"
 priority = 1
 [competitions.provider_ids]
 api_football = 140
+football_data_uk = "SP1"
 
 [[competitions]]
 key = "bundesliga"
@@ -35,6 +39,7 @@ type = "League"
 priority = 1
 [competitions.provider_ids]
 api_football = 78
+football_data_uk = "D1"
 
 [[competitions]]
 key = "serie_a"
@@ -44,6 +49,7 @@ type = "League"
 priority = 1
 [competitions.provider_ids]
 api_football = 135
+football_data_uk = "I1"
 
 [[competitions]]
 key = "ligue_1"
@@ -53,6 +59,7 @@ type = "League"
 priority = 1
 [competitions.provider_ids]
 api_football = 61
+football_data_uk = "F1"
 
 [[competitions]]
 key = "champions_league"

@@ -41,6 +41,8 @@ class ApiFootballSettings(BaseSettings):
     cache_ttl_leagues: int = Field(default=7 * 24 * 3600, ge=0)
     cache_ttl_fixtures_past: int = Field(default=7 * 24 * 3600, ge=0)
     cache_ttl_fixtures_recent: int = Field(default=15 * 60, ge=0)
+    cache_ttl_historical: int = Field(default=30 * 24 * 3600, ge=0)
+    cache_ttl_season_current: int = Field(default=6 * 3600, ge=0)
 
     @field_validator("key", mode="before")
     @classmethod
@@ -64,6 +66,8 @@ class Settings(BaseSettings):
     log_format: Literal["json", "console"] = "console"
     data_dir: Path = Path("var")
     competitions_file: Path = Path("configs/competitions.toml")
+    database_url: str = "postgresql+psycopg://football:football@localhost:5432/football_ai"
+    database_echo: bool = False
 
     api_football: ApiFootballSettings = Field(default_factory=ApiFootballSettings)
 

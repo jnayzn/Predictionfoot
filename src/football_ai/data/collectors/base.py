@@ -12,7 +12,7 @@ from datetime import date
 from typing import Protocol, runtime_checkable
 
 from football_ai.data.validators.issues import DataQualityIssue
-from football_ai.domain.models import Competition, Fixture
+from football_ai.domain.models import Competition, Fixture, FixtureDetails
 
 
 @dataclass(slots=True)
@@ -25,7 +25,8 @@ class CompetitionDiscovery:
 
 @dataclass(slots=True)
 class FixtureBatch:
-    day: date
+    day: date | None = None
+    label: str = ""
     fixtures: list[Fixture] = field(default_factory=list)
     issues: list[DataQualityIssue] = field(default_factory=list)
     total_received: int = 0
@@ -33,6 +34,13 @@ class FixtureBatch:
     duplicates_removed: int = 0
     rejected: int = 0
     from_cache: bool = False
+
+
+@dataclass(slots=True)
+class DetailsBatch:
+    details: list[FixtureDetails] = field(default_factory=list)
+    issues: list[DataQualityIssue] = field(default_factory=list)
+    requests: int = 0
 
 
 @runtime_checkable

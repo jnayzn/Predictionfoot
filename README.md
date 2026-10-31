@@ -4,12 +4,13 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 1 terminée** — initialisation du projet et connecteur API-Football.
-> Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> **État actuel : PHASE 2 terminée** — connecteur API-Football, base PostgreSQL, ETL et
+> import historique. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
 - [Fonctionnalités de la phase 1](#fonctionnalités-de-la-phase-1)
+- [Fonctionnalités de la phase 2](#fonctionnalités-de-la-phase-2)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Utilisation (CLI)](#utilisation-cli)
@@ -34,6 +35,20 @@ des modèles statistiques et du machine learning.
 | Matchs par date | **1 seule requête** par jour, filtrage local des compétitions couvertes |
 | Qualité des données | parsing strict (aucune valeur inventée), validations (équipes identiques, buts manquants sur un match terminé, dates incohérentes...) |
 | Abstraction fournisseur | interface `FootballDataProvider` : un autre fournisseur peut être ajouté sans toucher au reste |
+
+## Fonctionnalités de la phase 2
+
+| Fonction | Détail |
+|---|---|
+| Schéma PostgreSQL | 18 tables (voir [docs/database.md](docs/database.md)), migrations Alembic |
+| Intégrité | prédictions immuables (trigger), prédiction interdite après le coup d'envoi, probabilités contrôlées, classements en instantanés datés |
+| ETL | Extract → Transform → Validate → Load, chargements idempotents |
+| Corrections | changement de score sur un match terminé détecté, journalisé (`data_change_log`), `actual_results.revision` incrémenté |
+| Import historique | saison par saison, priorisé, **budget de requêtes** par exécution, **reprise** automatique (`ingestion_jobs`), respect de la couverture déclarée par l'API |
+| Détails de matchs | statistiques (xG si disponible), compositions, statistiques joueurs : 20 matchs par requête |
+| Blessures, classements, cotes | collecte et normalisation (1x2, over/under, BTTS, double chance) |
+| Rejeu | reconstruction complète de la base depuis l'archive JSON brute, sans aucun appel API |
+| Seconde source | CSV football-data.co.uk (gratuit) : résultats, statistiques, cotes d'ouverture et de clôture depuis les années 1990 |
 
 ## Installation
 
@@ -66,6 +81,14 @@ Le fichier `.env` est ignoré par Git : **ne jamais committer de secret**.
 Les compétitions couvertes sont définies dans [`configs/competitions.toml`](configs/competitions.toml) ;
 ajouter un championnat = ajouter un bloc puis lancer `football-ai discover` pour vérifier le mapping.
 
+## Base de données
+
+```bash
+docker compose up -d postgres redis   # ou un PostgreSQL 16 existant
+# DATABASE_URL dans .env (voir .env.example)
+football-ai db-upgrade
+```
+
 ## Utilisation (CLI)
 
 ```bash
@@ -75,6 +98,22 @@ football-ai discover                               # 6 compétitions + saisons (
 football-ai discover --json
 football-ai fixtures --date 2026-10-31             # matchs du jour (1 requête, cache 15 min / 7 jours)
 football-ai fixtures --date 2026-10-31 --league premier_league --league ligue_1 --json
+```
+
+Base de données et ETL (phase 2) :
+
+```bash
+football-ai db-upgrade                                    # migrations
+football-ai sync-competitions                             # ligues + saisons + couverture
+football-ai sync-fixtures --date 2026-10-31               # matchs du jour -> base
+football-ai import-history --seasons 2021-2025 --max-requests 80     # reprenable
+football-ai import-history --competition ligue_1 --seasons 2024 --steps fixtures,details
+football-ai import-csv --seasons 2005-2024                # football-data.co.uk (sans clé)
+football-ai import-csv --competition serie_a --seasons 2023 --file I1.csv
+football-ai replay                                        # reconstruit la base depuis var/raw
+football-ai jobs                                          # avancement de l'import
+football-ai db-stats                                      # volumes par table
+scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
 Équivalent sans installation du script : `python -m football_ai.cli <commande>`.
@@ -93,7 +132,9 @@ var/state/api_football_quota.json                                         # comp
 ## Tests et qualité
 
 ```bash
-pytest                 # 74 tests, HTTP entièrement simulé (respx), aucun appel réseau
+pytest                 # HTTP entièrement simulé (respx), aucun appel réseau ; base SQLite
+# Mêmes tests + tests spécifiques PostgreSQL (migrations réelles, trigger, contraintes) :
+TEST_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/football_ai_test pytest
 ruff check src tests
 ruff format --check src tests
 mypy                   # mode strict
@@ -106,18 +147,23 @@ structure documentée de l'API mais leurs valeurs sont inventées (voir `tests/c
 
 ```
 configs/competitions.toml          catalogue des compétitions (clé interne -> id par fournisseur)
+migrations/                        migrations Alembic
+scripts/                           scripts d'exploitation (import historique quotidien)
 src/football_ai/
   config/                          settings (pydantic-settings) et chargement des compétitions
   core/                            exceptions, logging structuré (JSON/console, masquage des secrets), I/O atomique
   domain/models.py                 modèles indépendants du fournisseur (Competition, Season, Fixture...)
   data/collectors/base.py          interface FootballDataProvider
   data/collectors/api_football/    client HTTP, quotas, parsers, provider
+  data/collectors/football_data_uk/  CSV historiques football-data.co.uk
+  data/pipeline/                   ETL, import historique, rejeu de l'archive
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
+  database/                        modèles SQLAlchemy, connexion, repositories
   bootstrap.py                     assemblage des dépendances
-  cli.py                           interface en ligne de commande
-tests/                             tests unitaires (pytest + respx)
-docs/                              architecture, sources de données
+  cli/                             interface en ligne de commande
+tests/unit, tests/integration      tests (pytest + respx ; SQLite et PostgreSQL)
+docs/                              architecture, base de données, sources de données
 ```
 
 Les dossiers des phases suivantes (`features/`, `models/`, `prediction/`, `backend/`, `bot/`...)
@@ -126,6 +172,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md) — architecture et décisions techniques
+- [docs/database.md](docs/database.md) — schéma et garanties d'intégrité
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -133,7 +180,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | Phase | Contenu | État |
 |---|---|---|
 | 1 | Initialisation + connecteur API-Football | ✅ terminé (validé par mocks, à valider avec une vraie clé) |
-| 2 | Collecte historique + PostgreSQL | à venir |
+| 2 | Collecte historique + PostgreSQL | ✅ terminé (validé sur PostgreSQL 16 avec API simulée) |
 | 3 | Nettoyage et validation | à venir |
 | 4 | Feature engineering | à venir |
 | 5 | Poisson / modèle de référence | à venir |
