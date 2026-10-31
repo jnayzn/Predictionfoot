@@ -4,9 +4,9 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 4 terminée** — données (API-Football, football-data.co.uk),
-> PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité et feature engineering
-> sans fuite d'information. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> **État actuel : PHASE 5 terminée** — données (API-Football, football-data.co.uk),
+> PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
+> fuite, modèles de référence (fréquences, Elo) et modèles de buts (Poisson, Dixon-Coles). Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -14,6 +14,7 @@ des modèles statistiques et du machine learning.
 - [Fonctionnalités de la phase 2](#fonctionnalités-de-la-phase-2)
 - [Fonctionnalités de la phase 3](#fonctionnalités-de-la-phase-3)
 - [Fonctionnalités de la phase 4](#fonctionnalités-de-la-phase-4)
+- [Fonctionnalités de la phase 5](#fonctionnalités-de-la-phase-5)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Utilisation (CLI)](#utilisation-cli)
@@ -76,6 +77,18 @@ Détails : [docs/data_quality.md](docs/data_quality.md).
 | Reproductibilité | jeu de variables versionné (Parquet + métadonnées, empreinte config + données) |
 
 Détails : [docs/features.md](docs/features.md).
+
+## Fonctionnalités de la phase 5
+
+| Fonction | Détail |
+|---|---|
+| Références | fréquences historiques, modèle Elo (régression logistique) |
+| Modèles de buts | Poisson (attaque/défense, décroissance temporelle, L2, gradient analytique) et Dixon-Coles |
+| Marchés | 1N2, double chance, buts attendus, Over/Under 1.5/2.5/3.5, BTTS, buts par équipe, top 5 des scores exacts |
+| Évaluation | log loss, Brier, RPS, accuracy/précision/rappel/F1, calibration, MAE des buts ; walk-forward ; test verrouillé |
+| Registre | artefacts versionnés + table `model_versions` |
+
+Détails : [docs/models.md](docs/models.md).
 
 ## Installation
 
@@ -143,6 +156,7 @@ football-ai db-stats                                      # volumes par table
 football-ai build-matches                                 # couche canonique multi-sources
 football-ai quality-report [--competition ligue_1] [--json] [--fail-on-error]
 football-ai build-features --check-leakage 50             # jeu de variables versionné
+football-ai train-baselines --validation-seasons 2023 --test-seasons 2024 [--register]
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -192,6 +206,9 @@ src/football_ai/
   data/quality/                    contrôles qualité du jeu de données, rapports
   features/                        variables (forme, attaque, défense, Elo, contexte, h2h,
                                    marché, joueurs), contrôle anti-fuite, stockage versionné
+  models/                          baselines, poisson, dixon_coles (+ phases suivantes)
+  prediction/                      matrices de scores et marchés
+  training/                        découpages temporels, métriques, walk-forward, registre
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -210,6 +227,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/database.md](docs/database.md) — schéma et garanties d'intégrité
 - [docs/data_quality.md](docs/data_quality.md) — nettoyage, rapprochement, contrôles qualité
 - [docs/features.md](docs/features.md) — variables et garanties anti-fuite
+- [docs/models.md](docs/models.md) — modèles, protocole d'évaluation, métriques
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -220,7 +238,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 2 | Collecte historique + PostgreSQL | ✅ terminé (validé sur PostgreSQL 16 avec API simulée) |
 | 3 | Nettoyage et validation | ✅ terminé |
 | 4 | Feature engineering | ✅ terminé |
-| 5 | Poisson / modèle de référence | à venir |
+| 5 | Poisson / modèle de référence | ✅ terminé |
 | 6 | XGBoost / LightGBM | à venir |
 | 7 | Deep learning (PyTorch) | à venir |
 | 8 | Ensemble + calibration | à venir |

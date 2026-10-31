@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from football_ai.config.competitions import CompetitionConfig
@@ -53,3 +53,28 @@ def test_load_frames_and_build_features(
     assert features["outcome"].notna().sum() == 60
     assert pd.api.types.is_float_dtype(features["home_elo"])
     assert check_leakage(frames, builder, sample=10, full=features).ok
+
+
+def test_model_registry_writes_model_versions(
+    session_factory: sessionmaker[Session], tmp_path: object
+) -> None:
+    from pathlib import Path
+
+    from football_ai.models.baselines import FrequencyModel
+    from football_ai.training.registry import latest_version, save_model
+    from tests.synthetic import generate_league
+
+    frame = FeatureBuilder().build(generate_league(n_teams=6, seasons=(2023,), seed=2).frames)
+    with session_scope(session_factory) as s:
+        for _ in range(2):
+            save_model(
+                FrequencyModel().fit(frame), name="frequency", algorithm="FrequencyModel",
+                params={}, metrics={"validation": {"log_loss": 1.0}}, data_fingerprint="x",
+                training_start=frame["kickoff_utc"].min().to_pydatetime(),
+                training_end=frame["kickoff_utc"].max().to_pydatetime(),
+                root=Path(str(tmp_path)), session=s,
+            )  # fmt: skip
+    with session_scope(session_factory) as s:
+        latest = latest_version(s, "frequency")
+        assert latest is not None and latest.metrics["validation"]["log_loss"] == 1.0
+        assert s.scalar(select(func.count()).select_from(db.ModelVersion)) == 2

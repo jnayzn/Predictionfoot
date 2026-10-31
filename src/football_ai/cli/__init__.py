@@ -12,6 +12,7 @@ from football_ai.cli import (
     api_commands,
     data_commands,
     feature_commands,
+    model_commands,
     quality_commands,
 )
 from football_ai.cli.common import (
@@ -49,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     data_commands.register(sub)
     quality_commands.register(sub)
     feature_commands.register(sub)
+    model_commands.register(sub)
     return parser
 
 
