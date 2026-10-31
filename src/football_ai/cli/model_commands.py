@@ -37,9 +37,10 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--validation-seasons", type=parse_seasons, required=True)
     p.add_argument("--test-seasons", type=parse_seasons, default=[])
     p.add_argument(
-        "--evaluate-test", action="store_true",
+        "--evaluate-test",
+        action="store_true",
         help="ALSO report test metrics (final evaluation only - never use them to tune)",
-    )  # fmt: skip
+    )
     p.add_argument("--refit-days", type=int, default=30, help="walk-forward refit period")
     p.add_argument("--register", action="store_true", help="fit on train+validation and register")
 
@@ -52,9 +53,10 @@ def register(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("train-models", help="Evaluate, tune and register any set of models")
     _common(p)
     p.add_argument(
-        "--models", default="frequency,elo,dixon_coles,xgboost,lightgbm,lightgbm_goals",
+        "--models",
+        default="frequency,elo,dixon_coles,xgboost,lightgbm,lightgbm_goals",
         help=f"comma-separated, among: {','.join(ALL_FACTORIES)}",
-    )  # fmt: skip
+    )
     p.add_argument("--tune", type=int, default=0, metavar="N", help="random-search trials")
     p.set_defaults(handler=lambda a, s: cmd_train(a, s, a.models.split(",")))
 
@@ -185,9 +187,14 @@ def cmd_train_ensemble(args: argparse.Namespace, settings: Settings) -> int:
     split = split_by_seasons(frame, args.validation_seasons, args.test_seasons)
     factories = {n: ALL_FACTORIES[n] for n in names}
     ensemble, report = build_ensemble(
-        frame, split, factories, pool=args.pool, refit_every_days=args.refit_days,
-        evaluate_test=args.evaluate_test, fit_production_members=args.register,
-    )  # fmt: skip
+        frame,
+        split,
+        factories,
+        pool=args.pool,
+        refit_every_days=args.refit_days,
+        evaluate_test=args.evaluate_test,
+        fit_production_members=args.register,
+    )
     print(f"pool: {report.pool}")
     print("weights: " + ", ".join(f"{k}={v:.3f}" for k, v in report.weights.items()))
     print(f"pruned: {report.pruned}")
@@ -213,15 +220,21 @@ def cmd_train_ensemble(args: argparse.Namespace, settings: Settings) -> int:
         fit_data = pd.concat([split.train, split.validation])
         with session_scope(build_session_factory(settings)) as session:
             registered = save_model(
-                ensemble, name="ensemble", algorithm=f"EnsembleModel[{report.pool}]",
-                params={"members": names, "weights": report.weights,
-                        "goal_weights": report.goal_weights,
-                        "calibration": report.calibration_method},
+                ensemble,
+                name="ensemble",
+                algorithm=f"EnsembleModel[{report.pool}]",
+                params={
+                    "members": names,
+                    "weights": report.weights,
+                    "goal_weights": report.goal_weights,
+                    "calibration": report.calibration_method,
+                },
                 metrics={"validation_cv": report.validation_cv, "test": report.test},
                 data_fingerprint=data_fingerprint(fit_data),
                 training_start=fit_data["kickoff_utc"].min().to_pydatetime(),
                 training_end=fit_data["kickoff_utc"].max().to_pydatetime(),
-                root=settings.data_dir / "models", session=session,
-            )  # fmt: skip
+                root=settings.data_dir / "models",
+                session=session,
+            )
         print(f"registered ensemble {registered.version}")
     return EXIT_OK

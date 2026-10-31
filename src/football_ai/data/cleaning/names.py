@@ -8,9 +8,34 @@ from difflib import SequenceMatcher
 
 # Generic club-type tokens that carry no identity information.
 _NOISE = frozenset(
-    {"fc", "cf", "afc", "ac", "as", "sc", "ssc", "us", "sv", "vfb", "vfl", "tsg", "fsv",
-     "rc", "rcd", "ud", "cd", "sd", "ca", "club", "calcio", "de", "del", "la", "1"}
-)  # fmt: skip
+    {
+        "fc",
+        "cf",
+        "afc",
+        "ac",
+        "as",
+        "sc",
+        "ssc",
+        "us",
+        "sv",
+        "vfb",
+        "vfl",
+        "tsg",
+        "fsv",
+        "rc",
+        "rcd",
+        "ud",
+        "cd",
+        "sd",
+        "ca",
+        "club",
+        "calcio",
+        "de",
+        "del",
+        "la",
+        "1",
+    }
+)
 
 
 def normalize_team_name(name: str) -> str:

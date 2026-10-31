@@ -38,9 +38,11 @@ def create_app(settings: Settings | None = None, service: FootballService | None
         factory = build_session_factory(settings)
         engine = PredictionEngine(factory, model_priority=settings.model_priority)
         service = FootballService(
-            factory, engine, load_competitions(settings.competitions_file),
+            factory,
+            engine,
+            load_competitions(settings.competitions_file),
             reports_dir=settings.data_dir / "reports",
-        )  # fmt: skip
+        )
 
     app = FastAPI(
         title="Football AI Predictor API",

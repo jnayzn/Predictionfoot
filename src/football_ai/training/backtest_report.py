@@ -126,9 +126,13 @@ def run_backtest(
     ensemble_info: dict[str, Any] | None = None
     if with_ensemble and len(factories) > 1 and not split.validation.empty:
         _, ens_report = build_ensemble(
-            frame, split, factories, refit_every_days=refit_every_days,
-            evaluate_test=True, fit_production_members=False,
-        )  # fmt: skip
+            frame,
+            split,
+            factories,
+            refit_every_days=refit_every_days,
+            evaluate_test=True,
+            fit_production_members=False,
+        )
         assert ens_report.test_predictions is not None
         pred = ens_report.test_predictions
         ensemble_info = ens_report.to_dict()

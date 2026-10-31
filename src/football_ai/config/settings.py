@@ -78,6 +78,18 @@ class Settings(BaseSettings):
     api_cors_origins: str = ""  # comma-separated
     production_model_priority: str = "ensemble,dixon_coles,elo"
 
+    # Telegram bot
+    telegram_bot_token: SecretStr | None = None
+    telegram_allowed_users: str = ""  # comma-separated user ids; empty = everyone
+    telegram_rate_limit_per_minute: int = Field(default=20, ge=1)
+    bot_backend: Literal["service", "http"] = "service"
+    bot_api_url: str = "http://localhost:8000"
+    bot_api_key: SecretStr | None = None
+
+    @property
+    def allowed_telegram_users(self) -> set[int]:
+        return {int(x) for x in self.telegram_allowed_users.split(",") if x.strip().isdigit()}
+
     @property
     def accepted_api_keys(self) -> set[str]:
         if self.api_keys is None:

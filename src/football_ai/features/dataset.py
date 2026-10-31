@@ -72,22 +72,34 @@ def load_base_frames(session: Session) -> BaseFrames:
     matches = _frame(
         session,
         select(
-            m.id.label("match_id"), m.competition_key, m.season_year, m.kickoff_utc,
-            m.home_team_id, m.away_team_id, m.status_group, m.home_goals, m.away_goals,
+            m.id.label("match_id"),
+            m.competition_key,
+            m.season_year,
+            m.kickoff_utc,
+            m.home_team_id,
+            m.away_team_id,
+            m.status_group,
+            m.home_goals,
+            m.away_goals,
             m.valid_for_training,
         ),
-    )  # fmt: skip
+    )
 
     ts = db.TeamStatistics
     raw_stats = _frame(
         session,
         select(
-            db.MatchSource.match_id, db.TeamLink.canonical_team_id.label("team_id"), ts.provider,
-            ts.shots_total, ts.shots_on_goal, ts.expected_goals, ts.corners,
+            db.MatchSource.match_id,
+            db.TeamLink.canonical_team_id.label("team_id"),
+            ts.provider,
+            ts.shots_total,
+            ts.shots_on_goal,
+            ts.expected_goals,
+            ts.corners,
         )
         .join(db.MatchSource, db.MatchSource.fixture_id == ts.fixture_id)
         .join(db.TeamLink, db.TeamLink.team_id == ts.team_id),
-    )  # fmt: skip
+    )
     if raw_stats.empty:
         team_stats = pd.DataFrame(columns=STAT_COLUMNS)
     else:

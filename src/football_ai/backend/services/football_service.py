@@ -29,6 +29,7 @@ from football_ai.backend.schemas.api import (
     RecommendationOut,
     ResultOut,
     SelectionOut,
+    SubscriberOut,
     TeamProfileOut,
     TeamRefOut,
 )
@@ -36,7 +37,7 @@ from football_ai.config.competitions import CompetitionConfig
 from football_ai.core.exceptions import FootballAIError
 from football_ai.database import models as db
 from football_ai.database.connection import session_scope
-from football_ai.database.repositories import PredictionRepository
+from football_ai.database.repositories import PredictionRepository, SubscriberRepository
 from football_ai.prediction.engine import MatchPrediction, PredictionEngine, UnknownMatchError
 from football_ai.prediction.odds import load_match_odds
 
@@ -213,11 +214,15 @@ class FootballService:
         except (UnknownMatchError, ValueError) as exc:
             raise NotFoundError(str(exc)) from exc
         match = MatchOut(
-            id=p.match_id, competition=p.competition_key, season=p.season_year,
-            kickoff_utc=p.kickoff_utc, kickoff_time_known=True, status="hypothetical",
+            id=p.match_id,
+            competition=p.competition_key,
+            season=p.season_year,
+            kickoff_utc=p.kickoff_utc,
+            kickoff_time_known=True,
+            status="hypothetical",
             home=TeamRefOut(id=p.home_team_id, name=p.home_team),
             away=TeamRefOut(id=p.away_team_id, name=p.away_team),
-        )  # fmt: skip
+        )
         return self._prediction_out(p, match, False)
 
     # -------------------------------------------------------------- teams
@@ -259,9 +264,12 @@ class FootballService:
                 if pred is not None and m.score is not None:
                     predicted = {"home": pred.p_home, "draw": pred.p_draw, "away": pred.p_away}
                     actual = (
-                        "home" if m.score["home"] > m.score["away"]
-                        else "away" if m.score["away"] > m.score["home"] else "draw"
-                    )  # fmt: skip
+                        "home"
+                        if m.score["home"] > m.score["away"]
+                        else "away"
+                        if m.score["away"] > m.score["home"]
+                        else "draw"
+                    )
                     correct = max(predicted, key=lambda k: predicted[k]) == actual
                 out.append(ResultOut(match=m, predicted=predicted, prediction_correct=correct))
         return out
@@ -283,6 +291,38 @@ class FootballService:
                 "backtest = walk-forward simulation on past seasons"
             ),
         )
+
+    # -------------------------------------------------------- subscribers
+    def subscribe(
+        self, chat_id: int, username: str | None, competitions: list[str]
+    ) -> SubscriberOut:
+        unknown = set(competitions) - set(self.competitions)
+        if unknown:
+            raise NotFoundError(f"unknown competitions: {sorted(unknown)}")
+        with session_scope(self.session_factory) as session:
+            row = SubscriberRepository(session).subscribe(chat_id, username, competitions)
+            return SubscriberOut(
+                chat_id=row.chat_id,
+                username=row.username,
+                competitions=list(row.competitions),
+                active=row.active,
+            )
+
+    def unsubscribe(self, chat_id: int) -> bool:
+        with session_scope(self.session_factory) as session:
+            return SubscriberRepository(session).unsubscribe(chat_id)
+
+    def subscribers(self) -> list[SubscriberOut]:
+        with session_scope(self.session_factory) as session:
+            return [
+                SubscriberOut(
+                    chat_id=r.chat_id,
+                    username=r.username,
+                    competitions=list(r.competitions),
+                    active=r.active,
+                )
+                for r in SubscriberRepository(session).active()
+            ]
 
     def health(self) -> dict[str, Any]:
         database = True

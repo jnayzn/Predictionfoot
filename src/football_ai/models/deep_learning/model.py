@@ -124,12 +124,17 @@ class SiameseNet(nn.Module):
         self.embedding = nn.Embedding(n_teams + 1, embedding_dim) if embedding_dim else None
         enc_in = n_team_features + embedding_dim
         self.encoder = nn.Sequential(
-            nn.Linear(enc_in, hidden), nn.GELU(), nn.Dropout(dropout),
-            nn.Linear(hidden, hidden), nn.GELU(),
-        )  # fmt: skip
+            nn.Linear(enc_in, hidden),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden, hidden),
+            nn.GELU(),
+        )
         self.head = nn.Sequential(
-            nn.Linear(3 * hidden + n_context, hidden), nn.GELU(), nn.Dropout(dropout),
-        )  # fmt: skip
+            nn.Linear(3 * hidden + n_context, hidden),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
         self.outcome = nn.Linear(hidden, 3)
         self.goals = nn.Linear(hidden, 2)
 
@@ -313,9 +318,13 @@ class NeuralModel:
         self.net = None
         if raw is not None and shape is not None:
             net = SiameseNet(
-                shape[0], shape[1], shape[2],
-                hidden=self.hidden, embedding_dim=self.embedding_dim, dropout=self.dropout,
-            )  # fmt: skip
+                shape[0],
+                shape[1],
+                shape[2],
+                hidden=self.hidden,
+                embedding_dim=self.embedding_dim,
+                dropout=self.dropout,
+            )
             net.load_state_dict(torch.load(io.BytesIO(raw), weights_only=True))
             net.eval()
             self.net = net

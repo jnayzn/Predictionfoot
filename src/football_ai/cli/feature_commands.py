@@ -18,9 +18,12 @@ def register(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("build-features", help="Compute the leakage-free feature set")
     p.add_argument("--competition", action="append", dest="competitions", help="(repeatable)")
     p.add_argument(
-        "--check-leakage", type=int, default=0, metavar="N",
+        "--check-leakage",
+        type=int,
+        default=0,
+        metavar="N",
         help="recompute N random matches from truncated data and compare",
-    )  # fmt: skip
+    )
     p.set_defaults(handler=cmd_build_features)
 
 

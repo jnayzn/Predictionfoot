@@ -623,3 +623,19 @@ class DataQualityReport(Base):
     errors: Mapped[int] = mapped_column(Integer)
     warnings: Mapped[int] = mapped_column(Integer)
     summary: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)
+
+
+# ================================================================ telegram bot
+class TelegramSubscriber(Base):
+    """Chats that opted in for automatic reports (explicit /subscribe)."""
+
+    __tablename__ = "telegram_subscribers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    username: Mapped[str | None] = mapped_column(String(64))
+    competitions: Mapped[list[str]] = mapped_column(JsonType, default=list)  # empty = all
+    daily_report: Mapped[bool] = mapped_column(Boolean, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

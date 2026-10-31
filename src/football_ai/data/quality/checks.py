@@ -79,10 +79,20 @@ def _frame(session: Session, stmt: Any) -> pd.DataFrame:
 def load_frames(session: Session, competition_key: str | None = None) -> dict[str, pd.DataFrame]:
     m = db.Match
     match_stmt = select(
-        m.id, m.competition_key, m.season_year, m.kickoff_utc, m.home_team_id, m.away_team_id,
-        m.status_group, m.home_goals, m.away_goals, m.source_conflict, m.valid_for_training,
-        m.exclusion_reason, m.sources,
-    )  # fmt: skip
+        m.id,
+        m.competition_key,
+        m.season_year,
+        m.kickoff_utc,
+        m.home_team_id,
+        m.away_team_id,
+        m.status_group,
+        m.home_goals,
+        m.away_goals,
+        m.source_conflict,
+        m.valid_for_training,
+        m.exclusion_reason,
+        m.sources,
+    )
     if competition_key:
         match_stmt = match_stmt.where(m.competition_key == competition_key)
     matches = _frame(session, match_stmt)
@@ -91,10 +101,16 @@ def load_frames(session: Session, competition_key: str | None = None) -> dict[st
     stats = _frame(
         session,
         select(
-            db.MatchSource.match_id, ts.fixture_id, ts.team_id, ts.provider, ts.shots_total,
-            ts.shots_on_goal, ts.possession_pct, ts.expected_goals,
+            db.MatchSource.match_id,
+            ts.fixture_id,
+            ts.team_id,
+            ts.provider,
+            ts.shots_total,
+            ts.shots_on_goal,
+            ts.possession_pct,
+            ts.expected_goals,
         ).join(db.MatchSource, db.MatchSource.fixture_id == ts.fixture_id),
-    )  # fmt: skip
+    )
     lineups = _frame(
         session,
         select(db.MatchSource.match_id).join(
@@ -105,10 +121,16 @@ def load_frames(session: Session, competition_key: str | None = None) -> dict[st
     odds = _frame(
         session,
         select(
-            db.MatchSource.match_id, o.fixture_id, o.provider, o.bookmaker, o.market, o.selection,
-            o.odds_type, o.odd,
+            db.MatchSource.match_id,
+            o.fixture_id,
+            o.provider,
+            o.bookmaker,
+            o.market,
+            o.selection,
+            o.odds_type,
+            o.odd,
         ).join(db.MatchSource, db.MatchSource.fixture_id == o.fixture_id),
-    )  # fmt: skip
+    )
     if competition_key and not matches.empty:
         ids = set(matches["id"])
         stats = stats[stats["match_id"].isin(ids)]
@@ -163,10 +185,12 @@ def _check_double_booking(report: QualityReport, matches: pd.DataFrame) -> None:
     gap = long.groupby("team")["kickoff_utc"].diff()
     clash = long[gap < pd.Timedelta(hours=36)]
     report.add(
-        "team_double_booking", WARNING, clash,
+        "team_double_booking",
+        WARNING,
+        clash,
         "a team plays twice within 36 hours (possible duplicate or wrong date)",
         ["id", "team", "kickoff_utc"],
-    )  # fmt: skip
+    )
 
 
 def _check_goals(report: QualityReport, matches: pd.DataFrame) -> None:
@@ -194,10 +218,12 @@ def _check_stale(report: QualityReport, matches: pd.DataFrame, now: datetime) ->
 def _check_conflicts(report: QualityReport, matches: pd.DataFrame) -> None:
     conflicts = matches[matches["source_conflict"].astype(bool)]
     report.add(
-        "source_conflicts", WARNING, conflicts,
+        "source_conflicts",
+        WARNING,
+        conflicts,
         "sources disagree on the score (primary source kept, excluded from training)",
         ["id", "home_goals", "away_goals", "sources"],
-    )  # fmt: skip
+    )
 
 
 def _check_season_completeness(report: QualityReport, matches: pd.DataFrame, now: datetime) -> None:
@@ -212,10 +238,12 @@ def _check_season_completeness(report: QualityReport, matches: pd.DataFrame, now
             rows.append({"competition": comp, "season": season, "finished": finished,
                          "expected": expected})  # fmt: skip
     report.add(
-        "incomplete_seasons", WARNING, pd.DataFrame(rows),
+        "incomplete_seasons",
+        WARNING,
+        pd.DataFrame(rows),
         "finished season without the expected n*(n-1) finished matches",
         ["competition", "season", "finished", "expected"],
-    )  # fmt: skip
+    )
 
 
 def _check_stats(report: QualityReport, stats: pd.DataFrame) -> None:
@@ -224,16 +252,22 @@ def _check_stats(report: QualityReport, stats: pd.DataFrame) -> None:
     shots = stats.dropna(subset=["shots_total", "shots_on_goal"])
     bad = shots[shots["shots_on_goal"] > shots["shots_total"]]
     report.add(
-        "shots_inconsistent", ERROR, bad, "shots on goal > total shots",
+        "shots_inconsistent",
+        ERROR,
+        bad,
+        "shots on goal > total shots",
         ["fixture_id", "team_id", "shots_on_goal", "shots_total"],
-    )  # fmt: skip
+    )
     poss = stats.dropna(subset=["possession_pct"]).groupby("fixture_id")["possession_pct"]
     total = poss.sum()[poss.count() == 2]
     off = total[(total < 98) | (total > 102)].rename("possession_sum").reset_index()
     report.add(
-        "possession_inconsistent", WARNING, off, "possession does not sum to ~100%",
+        "possession_inconsistent",
+        WARNING,
+        off,
+        "possession does not sum to ~100%",
         ["fixture_id", "possession_sum"],
-    )  # fmt: skip
+    )
 
 
 def _check_odds(report: QualityReport, odds: pd.DataFrame) -> None:
@@ -247,10 +281,12 @@ def _check_odds(report: QualityReport, odds: pd.DataFrame) -> None:
     low, high = ODDS_OVERROUND_RANGE
     bad = overround[(overround["overround"] < low) | (overround["overround"] > high)]
     report.add(
-        "odds_overround", WARNING, bad.round({"overround": 3}),
+        "odds_overround",
+        WARNING,
+        bad.round({"overround": 3}),
         f"1X2 implied probabilities sum outside [{low}, {high}]",
         [*keys, "overround"],
-    )  # fmt: skip
+    )
 
 
 # ------------------------------------------------------------------ coverage

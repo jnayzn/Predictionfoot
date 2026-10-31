@@ -130,9 +130,11 @@ def recommend(
     likely = most_likely_scenarios(prediction)
     if not odds:
         return Recommendation(
-            RecommendationStatus.NO_ODDS, [], likely,
+            RecommendationStatus.NO_ODDS,
+            [],
+            likely,
             ["aucune cote fiable disponible : la valeur d'une sélection ne peut pas être évaluée"],
-        )  # fmt: skip
+        )
     level = prediction.confidence.level
     lam = SHRINKAGE[level]
     reasons: list[str] = []

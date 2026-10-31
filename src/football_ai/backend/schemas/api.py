@@ -132,3 +132,16 @@ class PerformanceOut(BaseModel):
     live: dict[str, Any]
     backtest: dict[str, Any] | None
     note: str
+
+
+class SubscriberIn(BaseModel):
+    chat_id: int
+    username: str | None = Field(default=None, max_length=64)
+    competitions: list[str] = Field(default_factory=list, max_length=20)
+
+
+class SubscriberOut(BaseModel):
+    chat_id: int
+    username: str | None
+    competitions: list[str]
+    active: bool

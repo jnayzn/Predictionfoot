@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -23,31 +22,14 @@ from football_ai.config.competitions import load_competitions
 from football_ai.config.settings import Settings
 from football_ai.core.exceptions import ConfigurationError
 from football_ai.database import models as db
-from football_ai.database.connection import create_db_engine, create_session_factory, session_scope
-from football_ai.database.models import Base
+from football_ai.database.connection import session_scope
 from football_ai.prediction.confidence import Confidence, ConfidenceLevel
 from football_ai.prediction.engine import PredictionEngine, UnknownMatchError
 from football_ai.prediction.odds import load_match_odds
 from tests.conftest import ROOT
-from tests.db_seed import Seeded, seed_database
+from tests.db_seed import Seeded
 
 API_KEY = "test-api-key-123456"
-
-
-@pytest.fixture(scope="module")
-def world(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any]]:
-    root = tmp_path_factory.mktemp("api")
-    engine = create_db_engine(f"sqlite:///{root / 'api.db'}")
-    Base.metadata.create_all(engine)
-    factory = create_session_factory(engine)
-    seeded = seed_database(factory, root / "models")
-    yield {"factory": factory, "seeded": seeded, "root": root}
-    engine.dispose()
-
-
-@pytest.fixture(scope="module")
-def engine(world: dict[str, Any]) -> PredictionEngine:
-    return PredictionEngine(world["factory"])
 
 
 @pytest.fixture(scope="module")

@@ -56,9 +56,13 @@ def cmd_backtest(args: argparse.Namespace, settings: Settings) -> int:
             market = load_market_benchmark(session)
     split = split_by_seasons(frame, args.validation_seasons, args.test_seasons)
     report = run_backtest(
-        frame, split, {n: ALL_FACTORIES[n] for n in names}, market=market,
-        with_ensemble=not args.no_ensemble, refit_every_days=args.refit_days,
-    )  # fmt: skip
+        frame,
+        split,
+        {n: ALL_FACTORIES[n] for n in names},
+        market=market,
+        with_ensemble=not args.no_ensemble,
+        refit_every_days=args.refit_days,
+    )
     stamp = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}"
     directory = settings.data_dir / "reports"
     atomic_write_json(directory / f"backtest_{stamp}.json", report.to_dict())

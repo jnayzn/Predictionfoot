@@ -17,3 +17,4 @@ mlflow-skinny>=2.12
 # Optional deep-learning model (heavy): pip install torch   (or pip install -e ".[deep]")
 fastapi>=0.110
 uvicorn[standard]>=0.29
+aiogram>=3.4,<4

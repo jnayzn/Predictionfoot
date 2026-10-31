@@ -4,12 +4,12 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 10 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 11 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
 > fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
 > gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble, calibration,
 > backtesting scientifique, suivi des prédictions réelles, moteur d'analyse et de
-> recommandation, API FastAPI sécurisée. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> recommandation, API FastAPI sécurisée, bot Telegram. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -136,6 +136,18 @@ Détails : [docs/evaluation.md](docs/evaluation.md).
 
 Détails : [docs/api.md](docs/api.md).
 
+## Fonctionnalités de la phase 11
+
+| Fonction | Détail |
+|---|---|
+| Bot Telegram (aiogram 3) | /start /today /leagues /analyze /predictions /team /compare /results /performance /help + /subscribe /unsubscribe |
+| Navigation | boutons inline : compétition → match → analyse → marchés détaillés |
+| Architecture | interface `BotBackend` : services internes (même processus) ou API HTTP (conteneurs séparés) |
+| Robustesse | anti-spam par utilisateur, liste blanche optionnelle, messages d'erreur clairs, HTML échappé |
+| Notifications | rapport quotidien aux abonnés, désabonnement automatique des utilisateurs ayant bloqué le bot |
+
+Détails : [docs/bot.md](docs/bot.md).
+
 ## Installation
 
 Prérequis : Python **3.12+**.
@@ -208,6 +220,7 @@ football-ai train-ensemble --validation-seasons 2022,2023 --test-seasons 2024 --
 football-ai backtest --validation-seasons 2021,2022 --test-seasons 2023,2024
 football-ai evaluate-predictions                          # track record des prédictions publiées
 football-ai serve --host 0.0.0.0 --port 8000              # API (docs : /docs)
+football-ai bot                                           # bot Telegram (TELEGRAM_BOT_TOKEN)
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -264,6 +277,7 @@ src/football_ai/
   prediction/                      moteur, confiance, cotes, matrices de scores, marchés
   analysis/                        analyse de match/équipe, moteur de recommandation
   backend/                         API FastAPI (routes, schémas, services, sécurité)
+  bot/                             bot Telegram (handlers, keyboards, middlewares, notifications)
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -285,6 +299,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/models.md](docs/models.md) — modèles, protocole d'évaluation, métriques
 - [docs/evaluation.md](docs/evaluation.md) — backtesting, significativité, track record
 - [docs/api.md](docs/api.md) — API, sécurité, moteur d'analyse et de recommandation
+- [docs/bot.md](docs/bot.md) — bot Telegram
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -301,7 +316,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 8 | Ensemble + calibration | ✅ terminé |
 | 9 | Backtesting et évaluation | ✅ terminé |
 | 10 | API FastAPI | ✅ terminé |
-| 11 | Bot Telegram | à venir |
+| 11 | Bot Telegram | ✅ terminé |
 | 12 | Automatisation | à venir |
 | 13 | Docker, déploiement, monitoring | à venir |
 | 14 | Optimisation, commercialisation | à venir |

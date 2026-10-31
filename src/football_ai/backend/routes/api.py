@@ -15,6 +15,8 @@ from football_ai.backend.schemas.api import (
     PerformanceOut,
     PredictionOut,
     ResultOut,
+    SubscriberIn,
+    SubscriberOut,
     TeamRefOut,
 )
 from football_ai.backend.security import authenticate
@@ -98,3 +100,18 @@ def results(
 @router.get("/performance", response_model=PerformanceOut, tags=["predictions"])
 def performance(svc: Svc) -> PerformanceOut:
     return svc.performance()
+
+
+@router.post("/subscribers", response_model=SubscriberOut, tags=["notifications"])
+def subscribe(svc: Svc, body: SubscriberIn) -> SubscriberOut:
+    return svc.subscribe(body.chat_id, body.username, body.competitions)
+
+
+@router.delete("/subscribers/{chat_id}", tags=["notifications"])
+def unsubscribe(svc: Svc, chat_id: int) -> dict[str, bool]:
+    return {"unsubscribed": svc.unsubscribe(chat_id)}
+
+
+@router.get("/subscribers", response_model=list[SubscriberOut], tags=["notifications"])
+def subscribers(svc: Svc) -> list[SubscriberOut]:
+    return svc.subscribers()

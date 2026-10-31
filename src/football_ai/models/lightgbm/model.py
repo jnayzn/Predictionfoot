@@ -138,9 +138,12 @@ class LightGBMGoalsModel:
         for side in ("home", "away"):
             target = f"{side}_goals"
             model = lgb.LGBMRegressor(
-                objective="poisson", random_state=self.random_state, verbose=-1, n_jobs=1,
+                objective="poisson",
+                random_state=self.random_state,
+                verbose=-1,
+                n_jobs=1,
                 **self.params,
-            )  # fmt: skip
+            )
             hold_x = matrix(holdout, self.columns) if holdout is not None else None
             hold_y = holdout[target].to_numpy(dtype=float) if holdout is not None else None
             model.fit(
