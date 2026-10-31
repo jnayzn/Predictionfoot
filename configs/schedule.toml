@@ -47,3 +47,9 @@ cron = "30 3 * * *"
 cron = "0 4 * * *"
 seasons = "2018-2025"
 max_requests = 40
+
+[jobs.drift_check]            # feature drift (PSI/KS) + live performance vs backtest, weekly
+cron = "0 5 * * 1"
+recent_days = 60
+reference_days = 730
+tolerance = 0.05

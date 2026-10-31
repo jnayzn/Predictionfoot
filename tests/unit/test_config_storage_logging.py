@@ -147,3 +147,15 @@ def test_serve_runs_outside_any_event_loop(monkeypatch: pytest.MonkeyPatch, tmp_
     monkeypatch.chdir(tmp_path)
     assert main(["serve", "--port", "8123"]) == EXIT_OK
     assert calls and calls[0]["port"] == 8123 and calls[0]["factory"] is True
+
+
+def test_serve_refuses_production_without_api_keys(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import uvicorn
+
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: pytest.fail("must not start"))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("API_KEYS", raising=False)
+    assert main(["serve"]) == EXIT_CONFIG

@@ -377,3 +377,75 @@ async def run_job(name: str, ctx: JobContext, config: JobConfig | None = None) -
         extra={"job": name, "status": outcome.status, "requests": outcome.requests_used},
     )
     return outcome
+
+
+async def drift_check(ctx: JobContext, opts: dict[str, Any]) -> JobOutcome:
+    """Feature drift (recent vs reference window) + live performance vs backtest."""
+    import json
+
+    from football_ai.core.io import atomic_write_json
+    from football_ai.features.builder import FeatureBuilder
+    from football_ai.features.dataset import load_base_frames
+    from football_ai.monitoring.drift import feature_drift, performance_drift
+
+    now = ctx.now()
+    recent_days = int(opts.get("recent_days", 60))
+    reference_days = int(opts.get("reference_days", 730))
+    with session_scope(ctx.session_factory) as session:
+        frames = load_base_frames(session)
+        losses = [
+            float(x)
+            for x in session.scalars(
+                select(db.PredictionEvaluation.log_loss)
+                .order_by(db.PredictionEvaluation.evaluated_at.desc())
+                .limit(int(opts.get("live_window", 300)))
+            )
+        ]
+    features = FeatureBuilder().build(frames)
+    kick = features["kickoff_utc"]
+    cut = now - timedelta(days=recent_days)
+    reference = features[(kick < cut) & (kick >= cut - timedelta(days=reference_days))]
+    current = features[kick >= cut]
+    if len(reference) < 50 or len(current) < 20:
+        return JobOutcome(
+            status="skipped",
+            details={
+                "reason": "not enough matches",
+                "reference": len(reference),
+                "current": len(current),
+            },
+        )
+    report = feature_drift(reference, current, now=now)
+    reference_loss = None
+    reports = sorted((ctx.settings.data_dir / "reports").glob("backtest_*.json"))
+    if reports:
+        overall = json.loads(reports[-1].read_text(encoding="utf-8")).get("overall", {})
+        best = overall.get("ensemble") or (
+            min(overall.values(), key=lambda m: m["log_loss"]) if overall else None
+        )
+        reference_loss = best["log_loss"] if best else None
+    report.performance = performance_drift(
+        losses, reference_loss, tolerance=float(opts.get("tolerance", 0.05))
+    )
+    atomic_write_json(
+        ctx.settings.data_dir / "reports" / f"drift_{now:%Y%m%dT%H%M%SZ}.json", report.to_dict()
+    )
+    problems = [f"{f.feature}: PSI {f.psi:.2f}" for f in report.significant[:10]]
+    if report.performance["degraded"]:
+        perf = report.performance
+        problems.append(
+            f"live log loss {perf['live_log_loss']:.3f} > reference "
+            f"{perf['reference_log_loss']:.3f} + {perf['tolerance']}"
+        )
+    if problems:
+        await ctx.alerts.send("Dérive détectée (données ou performances)", problems)
+    return JobOutcome(
+        details={
+            "max_psi": round(report.max_psi, 3),
+            "significant": len(report.significant),
+            "performance_degraded": report.performance["degraded"],
+        }
+    )
+
+
+JOBS["drift_check"] = drift_check

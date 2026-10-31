@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     api_rate_limit_per_minute: int = Field(default=60, ge=1)
     api_cors_origins: str = ""  # comma-separated
     production_model_priority: str = "ensemble,dixon_coles,elo"
+    redis_url: str | None = None  # shared rate limiting across API workers
+    metrics_enabled: bool = True
+    metrics_token: SecretStr | None = None  # optional bearer token protecting /metrics
 
     # Telegram bot
     telegram_bot_token: SecretStr | None = None

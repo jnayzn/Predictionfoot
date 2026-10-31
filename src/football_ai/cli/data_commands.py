@@ -72,9 +72,19 @@ def _print_load(report: LoadReport) -> None:
         print(f"  ... {len(report.issues) - 20} more issues")
 
 
+def project_root() -> Path:
+    """Directory holding alembic.ini/migrations: the working directory (installed
+    package, Docker image) or the source checkout (editable install)."""
+    for candidate in (Path.cwd(), ROOT):
+        if (candidate / "alembic.ini").is_file() and (candidate / "migrations").is_dir():
+            return candidate
+    raise ConfigurationError("alembic.ini / migrations not found - run from the project directory")
+
+
 def cmd_db_upgrade(settings: Settings) -> int:
-    cfg = Config(str(ROOT / "alembic.ini"))
-    cfg.set_main_option("script_location", str(ROOT / "migrations"))
+    root = project_root()
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "migrations"))
     cfg.cmd_opts = argparse.Namespace(x=[f"url={settings.database_url}"])
     command.upgrade(cfg, "head")
     print("Database schema is up to date.")

@@ -1,0 +1,21 @@
+# Example Prometheus alerting rules.
+groups:
+  - name: football-ai
+    rules:
+      - alert: ApiDown
+        expr: up{job="football-ai"} == 0
+        for: 5m
+      - alert: HighErrorRate
+        expr: sum(rate(football_ai_http_requests_total{status=~"5.."}[10m])) / sum(rate(football_ai_http_requests_total[10m])) > 0.05
+        for: 10m
+      - alert: ScheduledJobFailing
+        expr: sum by (job) (football_ai_job_failures_24h) > 2
+      - alert: FixturesSyncStale
+        expr: football_ai_job_last_success_age_seconds{job="sync_fixtures"} > 36 * 3600
+      - alert: DataStale
+        expr: football_ai_data_age_seconds > 2 * 86400
+      - alert: ApiQuotaAlmostExhausted
+        expr: football_ai_api_quota_used / football_ai_api_quota_limit > 0.95
+      - alert: LivePerformanceDegraded
+        expr: football_ai_live_log_loss > 1.05
+        for: 1d

@@ -1,31 +1,125 @@
-# Development services. Application containers are added in Phase 13.
-# Usage: docker compose up -d postgres redis
+# Football AI Predictor - full stack.
+#   cp .env.example .env   # set secrets (API keys, passwords, tokens)
+#   docker compose up -d --build                 # postgres, redis, migrate, api, scheduler, backup
+#   docker compose --profile bot up -d           # + Telegram bot
+# Images are overridable (e.g. registry mirrors): PYTHON_IMAGE, POSTGRES_IMAGE, REDIS_IMAGE.
+
+x-app: &app
+  build:
+    context: .
+    args:
+      PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.13-slim}
+      EXTRAS: ${APP_EXTRAS:-}
+  image: football-ai:${APP_VERSION:-latest}
+  env_file:
+    - path: ${APP_ENV_FILE:-.env}
+      required: false
+  environment: &app-env
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-football}:${POSTGRES_PASSWORD:-football}@postgres:5432/${POSTGRES_DB:-football_ai}
+    REDIS_URL: redis://redis:6379/0
+    DATA_DIR: /app/var
+  volumes:
+    - appdata:/app/var
+  restart: unless-stopped
+  depends_on: &app-deps
+    postgres:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-football}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-football}
       POSTGRES_DB: ${POSTGRES_DB:-football_ai}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
-    ports:
-      - "127.0.0.1:6379:6379"
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    command: ["football-ai", "db-upgrade"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    command: ["football-ai", "serve", "--host", "0.0.0.0", "--port", "8000", "--workers", "${API_WORKERS:-2}"]
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      <<: *app-deps
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status != 200)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  scheduler:
+    <<: *app
+    command: ["football-ai", "scheduler"]
+
+  bot:
+    <<: *app
+    profiles: ["bot"]
+    command: ["football-ai", "bot"]
+    environment:
+      <<: *app-env
+      BOT_BACKEND: http
+      BOT_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  backup:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-football}
+      POSTGRES_DB: ${POSTGRES_DB:-football_ai}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-football}
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/football_ai_$$(date -u +%Y%m%dT%H%M%SZ).dump
+          pg_dump -h postgres -U $${POSTGRES_USER:-football} -d $${POSTGRES_DB:-football_ai} \
+            --format=custom --compress=6 --no-owner --file="$$f.partial" \
+            && pg_restore --list "$$f.partial" > /dev/null && mv "$$f.partial" "$$f" \
+            && echo "backup ok: $$f" || echo "backup FAILED"
+          find /backups -name 'football_ai_*.dump' -mtime +$${KEEP_DAYS} -delete
+          sleep 86400
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
   pgdata:
   redisdata:
+  appdata:
+  backups:

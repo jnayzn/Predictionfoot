@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from football_ai import __version__
 from football_ai.backend.middleware import request_context
 from football_ai.backend.routes.api import public, router
-from football_ai.backend.security import RateLimiter
+from football_ai.backend.security import build_rate_limiter
 from football_ai.backend.services.football_service import FootballService, NotFoundError
 from football_ai.bootstrap import build_session_factory
 from football_ai.config.competitions import load_competitions
@@ -24,6 +24,32 @@ from football_ai.core.logging import configure_logging, redaction_filter
 from football_ai.prediction.engine import NoProductionModelError, PredictionEngine
 
 logger = logging.getLogger(__name__)
+
+
+def _install_metrics(app: FastAPI, settings: Settings, service: FootballService) -> None:
+    import hmac
+
+    from fastapi import HTTPException
+    from prometheus_client import CollectorRegistry
+
+    from football_ai.bootstrap import build_quota_manager
+    from football_ai.monitoring.metrics import AppStateCollector, HttpMetrics, metrics_response
+
+    registry = CollectorRegistry()
+    http_metrics = HttpMetrics(registry)
+    registry.register(
+        AppStateCollector(service.session_factory, lambda: build_quota_manager(settings))
+    )
+    app.middleware("http")(http_metrics.middleware)
+    token = settings.metrics_token.get_secret_value() if settings.metrics_token else None
+
+    @app.get("/metrics", include_in_schema=False)
+    def metrics(request: Request) -> object:
+        if token is not None:
+            provided = request.headers.get("Authorization", "").removeprefix("Bearer ")
+            if not hmac.compare_digest(provided, token):
+                raise HTTPException(401, "invalid metrics token")
+        return metrics_response(registry)
 
 
 def create_app(settings: Settings | None = None, service: FootballService | None = None) -> FastAPI:
@@ -54,8 +80,12 @@ def create_app(settings: Settings | None = None, service: FootballService | None
     )
     app.state.service = service
     app.state.api_keys = settings.accepted_api_keys
-    app.state.rate_limiter = RateLimiter(settings.api_rate_limit_per_minute)
+    app.state.rate_limiter = build_rate_limiter(
+        settings.redis_url, settings.api_rate_limit_per_minute
+    )
     app.middleware("http")(request_context)
+    if settings.metrics_enabled:
+        _install_metrics(app, settings, service)
     origins = [o.strip() for o in settings.api_cors_origins.split(",") if o.strip()]
     if origins:
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET"])

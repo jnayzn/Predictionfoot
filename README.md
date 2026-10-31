@@ -4,12 +4,13 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 12 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 13 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
 > fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
 > gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble, calibration,
 > backtesting scientifique, suivi des prédictions réelles, moteur d'analyse et de
-> recommandation, API FastAPI sécurisée, bot Telegram, automatisation planifiée. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> recommandation, API FastAPI sécurisée, bot Telegram, automatisation planifiée, Docker,
+> sauvegardes, monitoring Prometheus et détection de dérive. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -160,6 +161,27 @@ Détails : [docs/bot.md](docs/bot.md).
 
 Détails : [docs/automation.md](docs/automation.md).
 
+## Fonctionnalités de la phase 13
+
+| Fonction | Détail |
+|---|---|
+| Docker | image multi-stage non-root ; `docker compose` : postgres, redis, migrate, api, scheduler, bot, backup |
+| Sauvegardes | `pg_dump` quotidien vérifié + rétention ; scripts de sauvegarde/restauration testés |
+| Monitoring | `/metrics` Prometheus (trafic, quota, tâches, fraîcheur, performance réelle, modèle) + règles d'alerte |
+| Dérive | PSI/KS des variables et dégradation de la log loss réelle → alertes |
+| Montée en charge | limitation de débit partagée via Redis entre workers |
+| CI | lint, mypy strict, tests SQLite + PostgreSQL, migrations, build Docker |
+
+Détails : [docs/deployment.md](docs/deployment.md).
+
+## Démarrage rapide (Docker)
+
+```bash
+cp .env.example .env    # API_KEYS, POSTGRES_PASSWORD, API_FOOTBALL_KEY, TELEGRAM_BOT_TOKEN...
+docker compose up -d --build
+curl http://127.0.0.1:8000/health
+```
+
 ## Installation
 
 Prérequis : Python **3.12+**.
@@ -294,6 +316,10 @@ src/football_ai/
   backend/                         API FastAPI (routes, schémas, services, sécurité)
   bot/                             bot Telegram (handlers, keyboards, middlewares, notifications)
   automation/                      tâches planifiées, planificateur, alertes
+  monitoring/                      métriques Prometheus, dérive des données et performances
+deploy/                            exemples Prometheus + règles d'alerte
+Dockerfile, docker-compose.yml     image et pile complète
+.github/workflows/ci.yml           intégration continue
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -317,6 +343,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/api.md](docs/api.md) — API, sécurité, moteur d'analyse et de recommandation
 - [docs/bot.md](docs/bot.md) — bot Telegram
 - [docs/automation.md](docs/automation.md) — tâches planifiées, quotas, alertes
+- [docs/deployment.md](docs/deployment.md) — Docker, sauvegardes, monitoring, CI
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -335,7 +362,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 10 | API FastAPI | ✅ terminé |
 | 11 | Bot Telegram | ✅ terminé |
 | 12 | Automatisation | ✅ terminé |
-| 13 | Docker, déploiement, monitoring | à venir |
+| 13 | Docker, déploiement, monitoring | ✅ terminé |
 | 14 | Optimisation, commercialisation | à venir |
 
 ## Avertissement

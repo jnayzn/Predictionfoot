@@ -1,0 +1,10 @@
+# Example Prometheus configuration (scrape the API /metrics endpoint).
+scrape_configs:
+  - job_name: football-ai
+    scrape_interval: 30s
+    metrics_path: /metrics
+    # authorization: { credentials: "<METRICS_TOKEN>" }   # when METRICS_TOKEN is set
+    static_configs:
+      - targets: ["api:8000"]
+
+rule_files: ["alerts.yml"]

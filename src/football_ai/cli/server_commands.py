@@ -19,6 +19,12 @@ def register(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
 def cmd_serve(args: argparse.Namespace, settings: Settings) -> int:
     import uvicorn
 
+    from football_ai.core.exceptions import ConfigurationError
+
+    # fail fast (clear exit code) instead of letting uvicorn respawn crashing workers
+    if settings.app_env == "production" and not settings.accepted_api_keys:
+        raise ConfigurationError("API_KEYS must be set when APP_ENV=production")
+
     uvicorn.run(
         "football_ai.backend.main:create_app",
         factory=True,
