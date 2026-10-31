@@ -4,10 +4,10 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 6 terminée** — données (API-Football, football-data.co.uk),
+> **État actuel : PHASE 8 terminée** — données (API-Football, football-data.co.uk),
 > PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité, feature engineering sans
-> fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles) et
-> gradient boosting (XGBoost, LightGBM) avec suivi MLflow. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> fuite, modèles de référence (fréquences, Elo), modèles de buts (Poisson, Dixon-Coles),
+> gradient boosting (XGBoost, LightGBM), réseau de neurones (PyTorch), ensemble et calibration. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
@@ -98,6 +98,16 @@ Détails : [docs/features.md](docs/features.md).
 | Optimisation | recherche aléatoire sur la validation, early stopping sur réserve chronologique interne |
 | Suivi | MLflow (SQLite local) + JSON ; importance des variables exportée |
 
+## Fonctionnalités des phases 7 et 8
+
+| Fonction | Détail |
+|---|---|
+| Réseau de neurones | encodeur d'équipe siamois + embeddings d'équipes, multi-tâche (1N2 + buts de Poisson), early stopping, reproductible ; dépendance optionnelle (`pip install -e ".[deep]"`) |
+| Ensemble | pool linéaire ou log-linéaire, poids appris sur la validation, élagage des modèles inutiles |
+| Calibration | aucune / température / Platt / isotonique, choisie par validation croisée chronologique |
+| Cohérence | matrice de scores réconciliée avec le 1N2 calibré → tous les marchés cohérents |
+| Test verrouillé | poids et calibration gelés avant l'évaluation finale |
+
 Détails : [docs/models.md](docs/models.md).
 
 ## Installation
@@ -168,6 +178,7 @@ football-ai quality-report [--competition ligue_1] [--json] [--fail-on-error]
 football-ai build-features --check-leakage 50             # jeu de variables versionné
 football-ai train-baselines --validation-seasons 2023 --test-seasons 2024 [--register]
 football-ai train-models --validation-seasons 2023 --test-seasons 2024 --tune 20 --register
+football-ai train-ensemble --validation-seasons 2022,2023 --test-seasons 2024 --evaluate-test --register
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -217,7 +228,8 @@ src/football_ai/
   data/quality/                    contrôles qualité du jeu de données, rapports
   features/                        variables (forme, attaque, défense, Elo, contexte, h2h,
                                    marché, joueurs), contrôle anti-fuite, stockage versionné
-  models/                          baselines, poisson, dixon_coles, xgboost, lightgbm (+ suivantes)
+  models/                          baselines, poisson, dixon_coles, xgboost, lightgbm,
+                                   deep_learning, ensemble, calibration
   prediction/                      matrices de scores et marchés
   training/                        découpages temporels, métriques, walk-forward, registre,
                                    optimisation, suivi d'expériences (MLflow)
@@ -252,8 +264,8 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 4 | Feature engineering | ✅ terminé |
 | 5 | Poisson / modèle de référence | ✅ terminé |
 | 6 | XGBoost / LightGBM | ✅ terminé |
-| 7 | Deep learning (PyTorch) | à venir |
-| 8 | Ensemble + calibration | à venir |
+| 7 | Deep learning (PyTorch) | ✅ terminé |
+| 8 | Ensemble + calibration | ✅ terminé |
 | 9 | Backtesting et évaluation | à venir |
 | 10 | API FastAPI | à venir |
 | 11 | Bot Telegram | à venir |

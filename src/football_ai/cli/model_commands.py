@@ -58,6 +58,12 @@ def register(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p.add_argument("--tune", type=int, default=0, metavar="N", help="random-search trials")
     p.set_defaults(handler=lambda a, s: cmd_train(a, s, a.models.split(",")))
 
+    p = sub.add_parser("train-ensemble", help="Learn ensemble weights + calibration on validation")
+    _common(p)
+    p.add_argument("--models", default="elo,dixon_coles,xgboost,lightgbm,lightgbm_goals")
+    p.add_argument("--pool", choices=["auto", "linear", "log_linear"], default="auto")
+    p.set_defaults(handler=cmd_train_ensemble)
+
 
 def load_features(settings: Settings, path: Path | None) -> pd.DataFrame:
     path = path or latest_feature_set(settings.data_dir / "features")
@@ -159,3 +165,63 @@ def _register(
             if callable(importance):
                 importance().to_csv(registered.path.parent / "feature_importance.csv", index=False)
             print(f"registered {registered.name} {registered.version}")
+
+
+def cmd_train_ensemble(args: argparse.Namespace, settings: Settings) -> int:
+    from football_ai.training.ensemble_pipeline import build_ensemble
+
+    names = [n.strip() for n in args.models.split(",") if n.strip()]
+    unknown = set(names) - set(ALL_FACTORIES)
+    if unknown:
+        print(f"Unknown models: {sorted(unknown)}; available: {sorted(ALL_FACTORIES)}")
+        return EXIT_ERROR
+    try:
+        frame = load_features(settings, args.features)
+    except FileNotFoundError as exc:
+        print(exc)
+        return EXIT_ERROR
+    if args.competitions:
+        frame = frame[frame["competition_key"].isin(args.competitions)]
+    split = split_by_seasons(frame, args.validation_seasons, args.test_seasons)
+    factories = {n: ALL_FACTORIES[n] for n in names}
+    ensemble, report = build_ensemble(
+        frame, split, factories, pool=args.pool, refit_every_days=args.refit_days,
+        evaluate_test=args.evaluate_test, fit_production_members=args.register,
+    )  # fmt: skip
+    print(f"pool: {report.pool}")
+    print("weights: " + ", ".join(f"{k}={v:.3f}" for k, v in report.weights.items()))
+    print(f"pruned: {report.pruned}")
+    print(f"calibration: {report.calibration_method} {report.calibration_scores}")
+    print("goal weights: " + ", ".join(f"{k}={v:.3f}" for k, v in report.goal_weights.items()))
+    rows = {**report.validation_members, **report.validation_cv}
+    print("\nVALIDATION (members walk-forward, ensemble cross-fitted)")
+    print(
+        pd.DataFrame(rows).T[["log_loss", "brier", "rps", "accuracy", "ece"]].round(4).to_string()
+    )
+    if report.test:
+        print("\nTEST (final, frozen ensemble)")
+        print(
+            pd.DataFrame(report.test)
+            .T[["log_loss", "brier", "rps", "accuracy", "ece"]]
+            .round(4)
+            .to_string()
+        )
+    path = settings.data_dir / "reports" / f"ensemble_{datetime.now(UTC):%Y%m%dT%H%M%SZ}.json"
+    atomic_write_json(path, {"split": split.describe(), **report.to_dict()})
+    print(f"\nreport saved to {path}")
+    if args.register:
+        fit_data = pd.concat([split.train, split.validation])
+        with session_scope(build_session_factory(settings)) as session:
+            registered = save_model(
+                ensemble, name="ensemble", algorithm=f"EnsembleModel[{report.pool}]",
+                params={"members": names, "weights": report.weights,
+                        "goal_weights": report.goal_weights,
+                        "calibration": report.calibration_method},
+                metrics={"validation_cv": report.validation_cv, "test": report.test},
+                data_fingerprint=data_fingerprint(fit_data),
+                training_start=fit_data["kickoff_utc"].min().to_pydatetime(),
+                training_end=fit_data["kickoff_utc"].max().to_pydatetime(),
+                root=settings.data_dir / "models", session=session,
+            )  # fmt: skip
+        print(f"registered ensemble {registered.version}")
+    return EXIT_OK
