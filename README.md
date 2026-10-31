@@ -4,14 +4,16 @@ Système d'analyse probabiliste des matchs de football (Premier League, La Liga,
 Bundesliga, Serie A, Ligue 1, UEFA Champions League) basé sur des données réelles,
 des modèles statistiques et du machine learning.
 
-> **État actuel : PHASE 3 terminée** — connecteur API-Football, base PostgreSQL, ETL,
-> import historique, rapprochement multi-sources et contrôles qualité. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
+> **État actuel : PHASE 4 terminée** — données (API-Football, football-data.co.uk),
+> PostgreSQL, ETL, rapprochement multi-sources, contrôles qualité et feature engineering
+> sans fuite d'information. Aucune prédiction n'est encore produite. Voir la [feuille de route](#feuille-de-route).
 
 ## Sommaire
 
 - [Fonctionnalités de la phase 1](#fonctionnalités-de-la-phase-1)
 - [Fonctionnalités de la phase 2](#fonctionnalités-de-la-phase-2)
 - [Fonctionnalités de la phase 3](#fonctionnalités-de-la-phase-3)
+- [Fonctionnalités de la phase 4](#fonctionnalités-de-la-phase-4)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Utilisation (CLI)](#utilisation-cli)
@@ -63,6 +65,17 @@ des modèles statistiques et du machine learning.
 | Historique qualité | rapports JSON + table `data_quality_reports` |
 
 Détails : [docs/data_quality.md](docs/data_quality.md).
+
+## Fonctionnalités de la phase 4
+
+| Fonction | Détail |
+|---|---|
+| ~170 variables | forme, attaque (buts, xG, tirs, efficacité), défense, domicile/extérieur, saison en cours, calendrier (repos, densité), confrontations directes, Elo dynamique, marché (cotes avant-match), joueurs absents |
+| Zéro fuite | état « après match » + `merge_asof` strictement antérieur ; cotes de clôture, classements stockés et compositions exclus |
+| Contrôle automatique | recalcul sur données tronquées au coup d'envoi (`--check-leakage`) |
+| Reproductibilité | jeu de variables versionné (Parquet + métadonnées, empreinte config + données) |
+
+Détails : [docs/features.md](docs/features.md).
 
 ## Installation
 
@@ -129,6 +142,7 @@ football-ai jobs                                          # avancement de l'impo
 football-ai db-stats                                      # volumes par table
 football-ai build-matches                                 # couche canonique multi-sources
 football-ai quality-report [--competition ligue_1] [--json] [--fail-on-error]
+football-ai build-features --check-leakage 50             # jeu de variables versionné
 scripts/import_history.sh 2015-2025 80                    # import quotidien (cron)
 ```
 
@@ -176,6 +190,8 @@ src/football_ai/
   data/pipeline/                   ETL, import historique, rejeu de l'archive
   data/cleaning/                   rapprochement multi-sources, couche canonique
   data/quality/                    contrôles qualité du jeu de données, rapports
+  features/                        variables (forme, attaque, défense, Elo, contexte, h2h,
+                                   marché, joueurs), contrôle anti-fuite, stockage versionné
   data/storage/                    cache de réponses, archive JSON brute
   data/validators/                 contrôles de qualité des données
   database/                        modèles SQLAlchemy, connexion, repositories
@@ -193,6 +209,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 - [docs/architecture.md](docs/architecture.md) — architecture et décisions techniques
 - [docs/database.md](docs/database.md) — schéma et garanties d'intégrité
 - [docs/data_quality.md](docs/data_quality.md) — nettoyage, rapprochement, contrôles qualité
+- [docs/features.md](docs/features.md) — variables et garanties anti-fuite
 - [docs/data_sources.md](docs/data_sources.md) — sources, couverture, quotas, licences
 
 ## Feuille de route
@@ -202,7 +219,7 @@ seront créés dans `src/football_ai/` au fil des phases ; voir [docs/architectu
 | 1 | Initialisation + connecteur API-Football | ✅ terminé (validé par mocks, à valider avec une vraie clé) |
 | 2 | Collecte historique + PostgreSQL | ✅ terminé (validé sur PostgreSQL 16 avec API simulée) |
 | 3 | Nettoyage et validation | ✅ terminé |
-| 4 | Feature engineering | à venir |
+| 4 | Feature engineering | ✅ terminé |
 | 5 | Poisson / modèle de référence | à venir |
 | 6 | XGBoost / LightGBM | à venir |
 | 7 | Deep learning (PyTorch) | à venir |

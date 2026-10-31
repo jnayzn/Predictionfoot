@@ -165,3 +165,14 @@ lisent uniquement la couche canonique.
 ### ADR-018 — Exclusion explicite plutôt que suppression
 Un match douteux n'est jamais supprimé : il est marqué `valid_for_training = false` avec une
 raison, ce qui rend les choix de nettoyage traçables et réversibles.
+
+### ADR-019 — Variables par « état après match » + jointure as-of
+Plutôt que des fenêtres décalées (`shift`) sur une table mêlant matchs joués et à venir,
+chaque famille produit l'état d'une équipe après chacun de ses matchs joués ; un match cible
+reçoit le dernier état strictement antérieur. L'absence de fuite est structurelle, le même
+code sert à l'entraînement et à la prédiction, et un contrôle automatique la vérifie.
+
+### ADR-020 — Historique toutes compétitions
+Les historiques d'équipe (forme, Elo, calendrier) mélangent championnat et Ligue des
+champions : un match européen informe sur la forme et la fatigue en championnat.
+Le bilan « saison en cours » reste, lui, par compétition.

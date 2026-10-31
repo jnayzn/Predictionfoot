@@ -8,7 +8,12 @@ import inspect
 import sys
 from collections.abc import Sequence
 
-from football_ai.cli import api_commands, data_commands, quality_commands
+from football_ai.cli import (
+    api_commands,
+    data_commands,
+    feature_commands,
+    quality_commands,
+)
 from football_ai.cli.common import (
     EXIT_AUTH,
     EXIT_CONFIG,
@@ -43,6 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     api_commands.register(sub)
     data_commands.register(sub)
     quality_commands.register(sub)
+    feature_commands.register(sub)
     return parser
 
 
