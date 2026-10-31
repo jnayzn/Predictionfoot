@@ -7,6 +7,7 @@ import asyncio
 import inspect
 import sys
 from collections.abc import Sequence
+from typing import Any
 
 from football_ai.cli import (
     api_commands,
@@ -15,6 +16,7 @@ from football_ai.cli import (
     feature_commands,
     model_commands,
     quality_commands,
+    server_commands,
 )
 from football_ai.cli.common import (
     EXIT_AUTH,
@@ -54,14 +56,21 @@ def build_parser() -> argparse.ArgumentParser:
     feature_commands.register(sub)
     model_commands.register(sub)
     evaluation_commands.register(sub)
+    server_commands.register(sub)
     return parser
 
 
-async def _dispatch(args: argparse.Namespace, settings: Settings) -> int:
+def _dispatch(args: argparse.Namespace, settings: Settings) -> int:
+    """Run sync handlers directly (e.g. ``serve`` starts its own event loop) and
+    async handlers inside a fresh event loop."""
     result = args.handler(args, settings)
     if inspect.isawaitable(result):
-        result = await result
+        result = asyncio.run(_await(result))
     return int(result)
+
+
+async def _await(awaitable: Any) -> Any:
+    return await awaitable
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -73,7 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_CONFIG
     configure_logging(settings.log_level, settings.log_format)
     try:
-        return asyncio.run(_dispatch(args, settings))
+        return _dispatch(args, settings)
     except ConfigurationError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return EXIT_CONFIG

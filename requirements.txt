@@ -15,3 +15,5 @@ xgboost>=2.0
 lightgbm>=4.3
 mlflow-skinny>=2.12
 # Optional deep-learning model (heavy): pip install torch   (or pip install -e ".[deep]")
+fastapi>=0.110
+uvicorn[standard]>=0.29

@@ -72,6 +72,22 @@ class Settings(BaseSettings):
 
     api_football: ApiFootballSettings = Field(default_factory=ApiFootballSettings)
 
+    # Backend API
+    api_keys: SecretStr | None = None  # comma-separated keys accepted in X-API-Key
+    api_rate_limit_per_minute: int = Field(default=60, ge=1)
+    api_cors_origins: str = ""  # comma-separated
+    production_model_priority: str = "ensemble,dixon_coles,elo"
+
+    @property
+    def accepted_api_keys(self) -> set[str]:
+        if self.api_keys is None:
+            return set()
+        return {k.strip() for k in self.api_keys.get_secret_value().split(",") if k.strip()}
+
+    @property
+    def model_priority(self) -> tuple[str, ...]:
+        return tuple(n.strip() for n in self.production_model_priority.split(",") if n.strip())
+
     @property
     def raw_dir(self) -> Path:
         return self.data_dir / "raw"

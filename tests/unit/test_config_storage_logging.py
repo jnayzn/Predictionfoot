@@ -128,3 +128,22 @@ def test_cli_quota_works_offline(
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "var"))
     assert main(["quota"]) == EXIT_OK
     assert "used 0/100" in capsys.readouterr().out
+
+
+def test_serve_runs_outside_any_event_loop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """uvicorn starts its own loop: the CLI must not call it from a running loop."""
+    import asyncio
+
+    import uvicorn
+
+    calls: list[dict[str, object]] = []
+
+    def fake_run(app: str, **kwargs: object) -> None:
+        with pytest.raises(RuntimeError):
+            asyncio.get_running_loop()
+        calls.append({"app": app, **kwargs})
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+    monkeypatch.chdir(tmp_path)
+    assert main(["serve", "--port", "8123"]) == EXIT_OK
+    assert calls and calls[0]["port"] == 8123 and calls[0]["factory"] is True
